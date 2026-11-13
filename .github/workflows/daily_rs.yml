@@ -1,0 +1,28 @@
+name: Daily Sector RS Ranking
+
+on:
+  schedule:
+    # 美股收盤後約 1 小時執行（UTC 22:00 ≈ 美東 17:00 / 18:00）
+    # 只跑週一到週五
+    - cron: '0 22 * * 1-5'
+  workflow_dispatch:   # 允許手動觸發測試
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Sector RS Bot
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        run: python main.py
