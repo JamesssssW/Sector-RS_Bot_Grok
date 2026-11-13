@@ -1,39 +1,56 @@
 import os
+import json
 import yfinance as yf
 import pandas as pd
 import numpy as np
 import requests
 from datetime import datetime
 import pytz
+from pathlib import Path
 
 # ====================== 設定 ======================
+# 20 個板塊 / 主題 ETF
 SECTORS = {
+    # 11 大 GICS 板塊
     "XLK": "Technology",
     "XLF": "Financials",
     "XLE": "Energy",
     "XLV": "Health Care",
     "XLI": "Industrials",
-    "XLY": "Consumer Discretionary",
+    "XLY": "Consumer Disc.",
     "XLP": "Consumer Staples",
     "XLU": "Utilities",
     "XLB": "Materials",
     "XLRE": "Real Estate",
-    "XLC": "Communication Services",
+    "XLC": "Comm. Services",
+    # 額外 9 個熱門主題 / 產業
+    "SMH": "Semiconductors",
+    "XBI": "Biotech",
+    "XRT": "Retail",
+    "XHB": "Homebuilders",
+    "KRE": "Regional Banks",
+    "ITA": "Aerospace & Defense",
+    "GDX": "Gold Miners",
+    "TAN": "Solar",
+    "BOTZ": "Robotics & AI",
 }
 
 BENCHMARK = "SPY"
 TICKERS = list(SECTORS.keys()) + [BENCHMARK]
 
-# 加權綜合 RS 權重（可自行調整）
+# 加權綜合 RS 權重
 WEIGHTS = {
     "1W": 0.20,
     "1M": 0.40,
     "3M": 0.40,
 }
 
-# RRG 計算參數
-RRG_WINDOW = 14          # 用於標準化的滾動窗口
-RS_MOM_LOOKBACK = 5      # RS-Momentum 回看天數
+# RRG 參數
+RRG_WINDOW = 14
+RS_MOM_LOOKBACK = 5
+
+# 檔案路徑
+PREV_RANK_FILE = Path("previous_ranking.json")
 
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK")
 
@@ -82,7 +99,7 @@ def calc_returns(df: pd.DataFrame):
         composite = 0.0
         valid_weight = 0.0
         for name, w in WEIGHTS.items():
-            if not np.isnan(rs_values[name]):
+            if not np.isnan(rs_values.get(name, np.nan)):
                 composite += rs_values[name] * w
                 valid_weight += w
 
@@ -91,13 +108,8 @@ def calc_returns(df: pd.DataFrame):
 
     return pd.DataFrame(results)
 
-# ====================== RRG 四象限計算 ======================
+# ====================== RRG 四象限 ======================
 def calc_rrg(df: pd.DataFrame):
-    """
-    計算簡易版 RRG：
-    - RS-Ratio  : 相對強度標準化
-    - RS-Momentum : RS-Ratio 的變化率
-    """
     rs_lines = {}
     for ticker in SECTORS.keys():
         rs = (df[ticker] / df[BENCHMARK]) * 100
@@ -105,7 +117,6 @@ def calc_rrg(df: pd.DataFrame):
 
     rs_df = pd.DataFrame(rs_lines)
 
-    # 標準化 RS-Ratio（類似 JDK 的做法）
     rs_ratio = {}
     rs_mom = {}
 
@@ -116,13 +127,11 @@ def calc_rrg(df: pd.DataFrame):
             rs_mom[ticker] = np.nan
             continue
 
-        # 滾動標準化
         rolling_mean = series.rolling(RRG_WINDOW).mean()
         rolling_std = series.rolling(RRG_WINDOW).std(ddof=0)
         ratio = 100 + (series - rolling_mean) / rolling_std
         ratio = ratio.dropna()
 
-        # RS-Momentum = 最近變化
         mom = (ratio / ratio.shift(RS_MOM_LOOKBACK) - 1) * 100
         mom = mom.dropna()
 
@@ -143,12 +152,46 @@ def get_quadrant(rs_ratio: float, rs_mom: float) -> str:
     else:
         return "Lagging"
 
-# ====================== 顏色對應 ======================
+# ====================== 前一日排名處理 ======================
+def load_previous_ranking():
+    if not PREV_RANK_FILE.exists():
+        return {}
+    try:
+        with open(PREV_RANK_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("ranking", {})
+    except Exception:
+        return {}
+
+def save_current_ranking(ranked_df: pd.DataFrame):
+    ranking = {
+        row["Ticker"]: int(row["Rank"])
+        for _, row in ranked_df.iterrows()
+    }
+    data = {
+        "date": datetime.utcnow().strftime("%Y-%m-%d"),
+        "ranking": ranking
+    }
+    with open(PREV_RANK_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+def calc_rank_change(current_rank: int, prev_rank: int | None) -> str:
+    if prev_rank is None:
+        return "NEW"
+    diff = prev_rank - current_rank  # 正數代表排名上升
+    if diff > 0:
+        return f"↑{diff}"
+    elif diff < 0:
+        return f"↓{abs(diff)}"
+    else:
+        return "→"
+
+# ====================== 顏色與 Emoji ======================
 QUADRANT_COLOR = {
-    "Leading": 0x2ECC71,      # 綠
-    "Improving": 0x3498DB,    # 藍
-    "Weakening": 0xF1C40F,    # 黃
-    "Lagging": 0xE74C3C,      # 紅
+    "Leading": 0x2ECC71,
+    "Improving": 0x3498DB,
+    "Weakening": 0xF1C40F,
+    "Lagging": 0xE74C3C,
     "N/A": 0x95A5A6,
 }
 
@@ -160,52 +203,49 @@ QUADRANT_EMOJI = {
     "N/A": "⚪",
 }
 
-# ====================== 產生 Discord Embed ======================
+# ====================== 建立 Discord Embed ======================
 def build_embed(ranked_df: pd.DataFrame, rs_ratio: dict, rs_mom: dict):
     et = pytz.timezone("US/Eastern")
     now_str = datetime.now(et).strftime("%Y-%m-%d %H:%M ET")
 
-    # 取最強板塊決定主色
     top_quad = ranked_df.iloc[0]["Quadrant"]
     color = QUADRANT_COLOR.get(top_quad, 0x5865F2)
 
-    # 標題與描述
-    title = "📊 美股板塊相對強度排名 (vs SPY)"
+    title = "📊 美股板塊相對強度排名（20 板塊）"
     description = (
         f"**資料時間**：{now_str}\n"
         f"**排序依據**：加權綜合 RS（1W 20% + 1M 40% + 3M 40%）\n"
-        f"**RRG 象限**：Leading / Improving / Weakening / Lagging"
+        f"**比較基準**：SPY　|　含前一日排名變化"
     )
-
-    # 建立欄位（前 11 名全部列出）
-    fields = []
 
     # 排名總表
     rank_lines = []
     for _, row in ranked_df.iterrows():
         emoji = QUADRANT_EMOJI.get(row["Quadrant"], "⚪")
+        change = row["RankChange"]
+        change_str = f"`{change}`" if change != "→" else "`→`"
         rank_lines.append(
-            f"`{row['Rank']:2d}` {emoji} **{row['Sector']}** "
+            f"`{row['Rank']:2d}` {change_str} {emoji} **{row['Sector']}** "
             f"({row['Ticker']})  "
-            f"RS:{row['RS_Composite']:+.1f}%  "
-            f"[{row['Quadrant']}]"
-
+            f"RS:`{row['RS_Composite']:+.1f}%`"
         )
 
-    fields.append({
-        "name": "🏆 綜合排名",
-        "value": "\n".join(rank_lines),
-        "inline": False
-    })
+    fields = [
+        {
+            "name": "🏆 綜合排名（含升降）",
+            "value": "\n".join(rank_lines),
+            "inline": False
+        }
+    ]
 
-    # 各週期 RS 細節
+    # 各週期 RS
     detail_lines = []
     for _, row in ranked_df.iterrows():
         detail_lines.append(
             f"**{row['Sector']}**  "
-            f"1W:{row['RS_1W']:+.1f}%  "
-            f"1M:{row['RS_1M']:+.1f}%  "
-            f"3M:{row['RS_3M']:+.1f}%"
+            f"1W:`{row['RS_1W']:+.1f}`  "
+            f"1M:`{row['RS_1M']:+.1f}`  "
+            f"3M:`{row['RS_3M']:+.1f}`"
         )
 
     fields.append({
@@ -214,7 +254,7 @@ def build_embed(ranked_df: pd.DataFrame, rs_ratio: dict, rs_mom: dict):
         "inline": False
     })
 
-    # RRG 數值
+    # RRG
     rrg_lines = []
     for _, row in ranked_df.iterrows():
         t = row["Ticker"]
@@ -222,8 +262,7 @@ def build_embed(ranked_df: pd.DataFrame, rs_ratio: dict, rs_mom: dict):
         mom = rs_mom.get(t, np.nan)
         rrg_lines.append(
             f"**{row['Sector']}**  "
-            f"RS-Ratio:{ratio:.1f}  "
-            f"Mom dev_bravo.1f}"
+            f"Ratio:`{ratio:.1f}`  Mom:`{mom:+.1f}`  [{row['Quadrant']}]"
         )
 
     fields.append({
@@ -232,14 +271,12 @@ def build_embed(ranked_df: pd.DataFrame, rs_ratio: dict, rs_mom: dict):
         "inline": False
     })
 
-    # 象限說明
     fields.append({
-        "name": "📖 象限說明",
+        "name": "📖 說明",
         "value": (
-            "🟢 **Leading**　：強勢且持續加速\n"
-            "🔵 **Improving**：弱勢但正在轉強\n"
-            "🟡 **Weakening**：強勢但動能減弱\n"
-            "🔴 **Lagging**　：弱勢且持續走弱"
+            "🟢 Leading　強勢且加速　｜　🔵 Improving　弱勢但轉強\n"
+            "🟡 Weakening 強勢但減弱　｜　🔴 Lagging　弱勢且走弱\n"
+            "`↑n` 排名上升 n 名　`↓n` 下降 n 名　`→` 持平　`NEW` 新進榜"
         ),
         "inline": False
     })
@@ -250,26 +287,24 @@ def build_embed(ranked_df: pd.DataFrame, rs_ratio: dict, rs_mom: dict):
         "color": color,
         "fields": fields,
         "footer": {
-            "text": "Sector RS Bot • 資料來源 yfinance • 僅供參考"
+            "text": "Sector RS Bot • 20 Sectors • Data: yfinance"
         },
         "timestamp": datetime.utcnow().isoformat()
     }
-
     return embed
 
 # ====================== 發送 Discord ======================
 def send_discord(embed: dict):
     if not WEBHOOK_URL:
-        print("未設定 DISCORD_WEBHOOK，只印出結果")
-        print(embed)
+        print("⚠️ 未設定 DISCORD_WEBHOOK，僅印出結果")
+        print(json.dumps(embed, indent=2, ensure_ascii=False))
         return
 
     payload = {
         "username": "Sector RS Bot",
         "embeds": [embed]
     }
-
-    resp = requests.post(WEBHOOK_URL, json=payload, timeout=15)
+    resp = requests.post(WEBHOOK_URL, json=payload, timeout=20)
     if resp.status_code in (200, 204):
         print("✅ 成功發送到 Discord")
     else:
@@ -278,35 +313,44 @@ def send_discord(embed: dict):
 
 # ====================== 主程式 ======================
 def main():
-    print("1️⃣ 抓取資料中...")
+    print("1️⃣ 抓取資料...")
     df = get_data(period="1y")
 
     print("2️⃣ 計算加權相對強度...")
     rs_df = calc_returns(df)
 
-    print("3️⃣ 計算 RRG 四象限...")
+    print("3️⃣ 計算 RRG...")
     rs_ratio, rs_mom = calc_rrg(df)
 
-    # 合併象限資訊
     rs_df["RS_Ratio"] = rs_df["Ticker"].map(rs_ratio)
     rs_df["RS_Mom"] = rs_df["Ticker"].map(rs_mom)
     rs_df["Quadrant"] = rs_df.apply(
         lambda r: get_quadrant(r["RS_Ratio"], r["RS_Mom"]), axis=1
     )
 
-    # 依加權綜合 RS 排序
+    # 排序
     ranked = rs_df.sort_values("RS_Composite", ascending=False).reset_index(drop=True)
     ranked["Rank"] = ranked.index + 1
 
-    print("4️⃣ 建立 Discord Embed...")
-    embed = build_embed(ranked, rs_ratio, rs_mom)
+    # 計算與前一日排名變化
+    print("4️⃣ 比較前一日排名...")
+    prev_ranking = load_previous_ranking()
+    ranked["RankChange"] = ranked.apply(
+        lambda r: calc_rank_change(r["Rank"], prev_ranking.get(r["Ticker"])),
+        axis=1
+    )
 
-    print("5️⃣ 發送結果...")
+    # 儲存今日排名（供下次比較）
+    save_current_ranking(ranked)
+
+    print("5️⃣ 建立 Embed 並發送...")
+    embed = build_embed(ranked, rs_ratio, rs_mom)
     send_discord(embed)
 
     # 終端機預覽
     print("\n===== 排名預覽 =====")
-    print(ranked[["Rank", "Sector", "RS_Composite", "Quadrant", "RS_1W", "RS_1M", "RS_3M"]].to_string(index=False))
+    cols = ["Rank", "RankChange", "Sector", "RS_Composite", "Quadrant", "RS_1W", "RS_1M", "RS_3M"]
+    print(ranked[cols].to_string(index=False))
 
 if __name__ == "__main__":
     main()
