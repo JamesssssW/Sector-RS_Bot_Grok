@@ -2,17 +2,16 @@ name: Daily Sector RS Ranking
 
 on:
   schedule:
-    # 美股收盤後約 1 小時執行（UTC 22:00 ≈ 美東 17:00 / 18:00）
-    # 只跑週一到週五
-    - cron: '0 22 * * 1-5'
-  workflow_dispatch:   # 允許手動觸發測試
+    # 美股收盤後約 30~60 分鐘（UTC 22:30，對應美東 17:30 / 18:30）
+    - cron: '30 22 * * 1-5'
+  workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
