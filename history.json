@@ -1,0 +1,387 @@
+{
+  "XLU": {
+    "ranks": [
+      1
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 1,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLV": {
+    "ranks": [
+      2
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 2,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLP": {
+    "ranks": [
+      3
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 3,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLRE": {
+    "ranks": [
+      4
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 4,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLF": {
+    "ranks": [
+      5
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 5,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "IYT": {
+    "ranks": [
+      6
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 6,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "IHI": {
+    "ranks": [
+      7
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 7,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLC": {
+    "ranks": [
+      8
+    ],
+    "quadrants": [
+      "Improving"
+    ],
+    "rank": 8,
+    "quadrant": "Improving",
+    "last_date": "2026-11-16"
+  },
+  "JETS": {
+    "ranks": [
+      9
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 9,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLY": {
+    "ranks": [
+      10
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 10,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "KRE": {
+    "ranks": [
+      11
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 11,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XRT": {
+    "ranks": [
+      12
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 12,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XHB": {
+    "ranks": [
+      13
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 13,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLB": {
+    "ranks": [
+      14
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 14,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "ITA": {
+    "ranks": [
+      15
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 15,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLI": {
+    "ranks": [
+      16
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 16,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "UFO": {
+    "ranks": [
+      17
+    ],
+    "quadrants": [
+      "Improving"
+    ],
+    "rank": 17,
+    "quadrant": "Improving",
+    "last_date": "2026-11-16"
+  },
+  "XBI": {
+    "ranks": [
+      18
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 18,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "PAVE": {
+    "ranks": [
+      19
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 19,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "FINX": {
+    "ranks": [
+      20
+    ],
+    "quadrants": [
+      "Improving"
+    ],
+    "rank": 20,
+    "quadrant": "Improving",
+    "last_date": "2026-11-16"
+  },
+  "SKYY": {
+    "ranks": [
+      21
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 21,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "XLE": {
+    "ranks": [
+      22
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 22,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "IGV": {
+    "ranks": [
+      23
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 23,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "CIBR": {
+    "ranks": [
+      24
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 24,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "SOCL": {
+    "ranks": [
+      25
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 25,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "DRAM": {
+    "ranks": [
+      26
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 26,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "TAN": {
+    "ranks": [
+      27
+    ],
+    "quadrants": [
+      "Leading"
+    ],
+    "rank": 27,
+    "quadrant": "Leading",
+    "last_date": "2026-11-16"
+  },
+  "XLK": {
+    "ranks": [
+      28
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 28,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "WGMI": {
+    "ranks": [
+      29
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 29,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "ICLN": {
+    "ranks": [
+      30
+    ],
+    "quadrants": [
+      "Improving"
+    ],
+    "rank": 30,
+    "quadrant": "Improving",
+    "last_date": "2026-11-16"
+  },
+  "SMH": {
+    "ranks": [
+      31
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 31,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "BOTZ": {
+    "ranks": [
+      32
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 32,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "XME": {
+    "ranks": [
+      33
+    ],
+    "quadrants": [
+      "Improving"
+    ],
+    "rank": 33,
+    "quadrant": "Improving",
+    "last_date": "2026-11-16"
+  },
+  "LYTE": {
+    "ranks": [
+      34
+    ],
+    "quadrants": [
+      "Lagging"
+    ],
+    "rank": 34,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-16"
+  },
+  "COPX": {
+    "ranks": [
+      35
+    ],
+    "quadrants": [
+      "Improving"
+    ],
+    "rank": 35,
+    "quadrant": "Improving",
+    "last_date": "2026-11-16"
+  }
+}
