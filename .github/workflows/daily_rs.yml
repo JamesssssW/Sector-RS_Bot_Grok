@@ -2,37 +2,54 @@ name: Daily Sector RS Ranking
 
 on:
   schedule:
-    - cron: '30 22 * * 1-5'   # 美股收盤後
-  workflow_dispatch:
+    # ⏱️ 港時 (HKT, UTC+8) 星期一至五排程：
+    # 1. 開市時段（香港時間 21:00 至 04:00，即 UTC 13:00 - 20:00）：每小時運行一次
+    - cron: '0 13-20 * * 1-5'
+    
+    # 2. 收市時段（香港時間 05:00, 08:00, 11:00, 14:00, 17:00，即 UTC 21,0,3,6,9 點）：每 3 小時運行一次
+    - cron: '0 21,0,3,6,9 * * 1-5'
+
+  workflow_dispatch: # 支援手動觸發
 
 permissions:
-  contents: write   # 允許 commit previous_ranking.json
+  contents: write # 必須開啟寫入權限，才能儲存 history.json
 
 jobs:
-  run:
+  run-rs-rank:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.10'
+          cache: 'pip'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run Sector RS Bot
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        run: python main.py
-
-      - name: Commit updated ranking
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add previous_ranking.json
-          git diff --staged --quiet || git commit -m "Update previous_ranking.json [skip ci]"
-          git push
+          pip install -r requirements.txt
+
+      - name: Run script
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          python main.py
+
+      - name: Commit and push history
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add history.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update daily sector RS history" && git push)
+
+      # 🚨 當執行出錯時自動發送 Discord 警報
+      - name: Send Discord Failure Alert
+        if: failure()
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -H "Content-Type: application/json" \
+               -d '{"content": "🚨 **[GitHub Actions 警報]** 美股板塊量化監控系統執行失敗！請檢查 GitHub 倉庫嘅 Actions Log 了解詳情。"}' \
+               $DISCORD_WEBHOOK_URL
