@@ -2,456 +2,526 @@
   "XLU": {
     "ranks": [
       1,
+      1,
       1
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 1,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "XLV": {
     "ranks": [
+      2,
       2,
       2
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 2,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "XLP": {
+  "XLF": {
     "ranks": [
-      3,
+      5,
+      5,
       3
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 3,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "XLRE": {
+  "XLC": {
     "ranks": [
-      4,
+      8,
+      8,
       4
     ],
     "quadrants": [
-      "Leading",
-      "Leading"
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 4,
-    "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-13"
   },
-  "XLF": {
+  "XLP": {
     "ranks": [
-      5,
+      3,
+      3,
       5
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 5,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "IYT": {
+  "XLRE": {
     "ranks": [
-      6,
+      4,
+      4,
       6
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 6,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "IHI": {
+  "XLY": {
     "ranks": [
-      7,
+      10,
+      10,
       7
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 7,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "XLC": {
+  "IHI": {
     "ranks": [
-      8,
+      7,
+      7,
       8
     ],
     "quadrants": [
-      "Improving",
-      "Improving"
+      "Leading",
+      "Leading",
+      "Leading"
     ],
     "rank": 8,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "quadrant": "Leading",
+    "last_date": "2026-11-13"
   },
   "JETS": {
     "ranks": [
+      9,
       9,
       9
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 9,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "XLY": {
+  "IYT": {
     "ranks": [
-      10,
+      6,
+      6,
       10
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 10,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "KRE": {
     "ranks": [
+      11,
       11,
       11
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 11,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "XRT": {
     "ranks": [
+      12,
       12,
       12
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 12,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "XHB": {
+  "ITA": {
     "ranks": [
-      13,
+      15,
+      15,
       13
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 13,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "XLB": {
+  "UFO": {
     "ranks": [
-      14,
+      17,
+      17,
       14
     ],
     "quadrants": [
-      "Leading",
-      "Leading"
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 14,
-    "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-13"
   },
-  "ITA": {
+  "XHB": {
     "ranks": [
-      15,
+      13,
+      13,
       15
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 15,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "XLI": {
     "ranks": [
+      16,
       16,
       16
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 16,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
-  },
-  "UFO": {
-    "ranks": [
-      17,
-      17
-    ],
-    "quadrants": [
-      "Improving",
-      "Improving"
-    ],
-    "rank": 17,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "XBI": {
     "ranks": [
       18,
+      18,
+      17
+    ],
+    "quadrants": [
+      "Leading",
+      "Leading",
+      "Leading"
+    ],
+    "rank": 17,
+    "quadrant": "Leading",
+    "last_date": "2026-11-13"
+  },
+  "XLB": {
+    "ranks": [
+      14,
+      14,
       18
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading"
     ],
     "rank": 18,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "PAVE": {
     "ranks": [
+      19,
       19,
       19
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 19,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "FINX": {
     "ranks": [
+      20,
       20,
       20
     ],
     "quadrants": [
       "Improving",
+      "Improving",
       "Improving"
     ],
     "rank": 20,
     "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "SKYY": {
     "ranks": [
+      21,
       21,
       21
     ],
     "quadrants": [
       "Lagging",
+      "Lagging",
       "Lagging"
     ],
     "rank": 21,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "XLE": {
     "ranks": [
+      22,
       22,
       22
     ],
     "quadrants": [
       "Lagging",
+      "Lagging",
       "Lagging"
     ],
     "rank": 22,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "IGV": {
+  "CIBR": {
     "ranks": [
-      23,
+      24,
+      24,
       23
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
     "rank": 23,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "CIBR": {
+  "IGV": {
     "ranks": [
-      24,
+      23,
+      23,
       24
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
     "rank": 24,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "SOCL": {
+  "DRAM": {
     "ranks": [
-      25,
+      26,
+      26,
       25
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
     "rank": 25,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "DRAM": {
+  "WGMI": {
     "ranks": [
-      26,
+      29,
+      29,
       26
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
     "rank": 26,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
-  },
-  "XLK": {
-    "ranks": [
-      28,
-      27
-    ],
-    "quadrants": [
-      "Lagging",
-      "Lagging"
-    ],
-    "rank": 27,
-    "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "TAN": {
     "ranks": [
       27,
-      28
+      28,
+      27
     ],
     "quadrants": [
       "Leading",
+      "Leading",
       "Leading"
     ],
-    "rank": 28,
+    "rank": 27,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "WGMI": {
+  "XLK": {
     "ranks": [
-      29,
+      28,
+      27,
+      28
+    ],
+    "quadrants": [
+      "Lagging",
+      "Lagging",
+      "Lagging"
+    ],
+    "rank": 28,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-13"
+  },
+  "SMH": {
+    "ranks": [
+      31,
+      31,
       29
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
     "rank": 29,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "ICLN": {
     "ranks": [
+      30,
       30,
       30
     ],
     "quadrants": [
       "Improving",
+      "Improving",
       "Improving"
     ],
     "rank": 30,
     "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
-  "SMH": {
+  "LYTE": {
     "ranks": [
-      31,
+      34,
+      34,
       31
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
     "rank": 31,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   },
   "BOTZ": {
     "ranks": [
+      32,
       32,
       32
     ],
     "quadrants": [
       "Lagging",
+      "Lagging",
       "Lagging"
     ],
     "rank": 32,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
+  },
+  "SOCL": {
+    "ranks": [
+      25,
+      25,
+      33
+    ],
+    "quadrants": [
+      "Lagging",
+      "Lagging",
+      "Lagging"
+    ],
+    "rank": 33,
+    "quadrant": "Lagging",
+    "last_date": "2026-11-13"
   },
   "XME": {
     "ranks": [
       33,
-      33
-    ],
-    "quadrants": [
-      "Improving",
-      "Improving"
-    ],
-    "rank": 33,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
-  },
-  "LYTE": {
-    "ranks": [
-      34,
+      33,
       34
     ],
     "quadrants": [
-      "Lagging",
-      "Lagging"
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 34,
-    "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-13"
   },
   "COPX": {
     "ranks": [
+      35,
       35,
       35
     ],
     "quadrants": [
       "Improving",
+      "Improving",
       "Improving"
     ],
     "rank": 35,
     "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-13"
   }
 }
