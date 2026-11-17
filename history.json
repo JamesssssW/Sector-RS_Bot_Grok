@@ -4,9 +4,11 @@
       1,
       1,
       1,
+      1,
       1
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -14,16 +16,18 @@
     ],
     "rank": 1,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XLV": {
+  "XLP": {
     "ranks": [
-      2,
-      2,
-      2,
+      3,
+      3,
+      5,
+      3,
       2
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -31,16 +35,18 @@
     ],
     "rank": 2,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XLP": {
+  "XLRE": {
     "ranks": [
-      3,
-      3,
-      5,
+      4,
+      4,
+      6,
+      4,
       3
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -48,16 +54,18 @@
     ],
     "rank": 3,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XLRE": {
+  "XLV": {
     "ranks": [
-      4,
-      4,
-      6,
+      2,
+      2,
+      2,
+      2,
       4
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -65,16 +73,18 @@
     ],
     "rank": 4,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
   "XLF": {
     "ranks": [
       5,
       5,
       3,
+      5,
       5
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -82,16 +92,18 @@
     ],
     "rank": 5,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "IYT": {
+  "IHI": {
     "ranks": [
-      6,
-      6,
-      10,
+      7,
+      7,
+      8,
+      9,
       6
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -99,16 +111,18 @@
     ],
     "rank": 6,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
   "JETS": {
     "ranks": [
       9,
       9,
       9,
+      7,
       7
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -116,33 +130,37 @@
     ],
     "rank": 7,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XLC": {
+  "KRE": {
     "ranks": [
-      8,
-      8,
-      4,
+      11,
+      11,
+      11,
+      11,
       8
     ],
     "quadrants": [
-      "Improving",
-      "Improving",
-      "Improving",
-      "Improving"
+      "Leading",
+      "Leading",
+      "Leading",
+      "Leading",
+      "Leading"
     ],
     "rank": 8,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "quadrant": "Leading",
+    "last_date": "2026-11-17"
   },
-  "IHI": {
+  "IYT": {
     "ranks": [
-      7,
-      7,
-      8,
+      6,
+      6,
+      10,
+      6,
       9
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -150,33 +168,37 @@
     ],
     "rank": 9,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
+  },
+  "XLC": {
+    "ranks": [
+      8,
+      8,
+      4,
+      8,
+      10
+    ],
+    "quadrants": [
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving"
+    ],
+    "rank": 10,
+    "quadrant": "Improving",
+    "last_date": "2026-11-17"
   },
   "XLY": {
     "ranks": [
       10,
       10,
       7,
-      10
-    ],
-    "quadrants": [
-      "Leading",
-      "Leading",
-      "Leading",
-      "Leading"
-    ],
-    "rank": 10,
-    "quadrant": "Leading",
-    "last_date": "2026-11-16"
-  },
-  "KRE": {
-    "ranks": [
-      11,
-      11,
-      11,
+      10,
       11
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -184,16 +206,18 @@
     ],
     "rank": 11,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XRT": {
+  "XHB": {
     "ranks": [
-      12,
-      12,
-      12,
+      13,
+      13,
+      15,
+      13,
       12
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -201,16 +225,18 @@
     ],
     "rank": 12,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XHB": {
+  "XLB": {
     "ranks": [
-      13,
-      13,
-      15,
+      14,
+      14,
+      18,
+      14,
       13
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -218,16 +244,18 @@
     ],
     "rank": 13,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XLB": {
+  "XRT": {
     "ranks": [
-      14,
-      14,
-      18,
+      12,
+      12,
+      12,
+      12,
       14
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -235,16 +263,18 @@
     ],
     "rank": 14,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
   "ITA": {
     "ranks": [
       15,
       15,
       13,
+      15,
       15
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -252,10 +282,11 @@
     ],
     "rank": 15,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
   "XLI": {
     "ranks": [
+      16,
       16,
       16,
       16,
@@ -265,37 +296,42 @@
       "Leading",
       "Leading",
       "Leading",
+      "Leading",
       "Leading"
     ],
     "rank": 16,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "UFO": {
+  "XLE": {
     "ranks": [
-      17,
-      17,
-      14,
+      22,
+      22,
+      22,
+      19,
       17
     ],
     "quadrants": [
-      "Improving",
-      "Improving",
-      "Improving",
-      "Improving"
+      "Lagging",
+      "Lagging",
+      "Lagging",
+      "Lagging",
+      "Lagging"
     ],
     "rank": 17,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "quadrant": "Lagging",
+    "last_date": "2026-11-17"
   },
   "PAVE": {
     "ranks": [
       19,
       19,
       19,
+      18,
       18
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -303,50 +339,56 @@
     ],
     "rank": 18,
     "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XLE": {
+  "UFO": {
     "ranks": [
-      22,
-      22,
-      22,
+      17,
+      17,
+      14,
+      17,
       19
     ],
     "quadrants": [
-      "Lagging",
-      "Lagging",
-      "Lagging",
-      "Lagging"
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 19,
-    "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-17"
   },
-  "XBI": {
+  "FINX": {
     "ranks": [
-      18,
-      18,
-      17,
+      20,
+      20,
+      20,
+      23,
       20
     ],
     "quadrants": [
-      "Leading",
-      "Leading",
-      "Leading",
-      "Leading"
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 20,
-    "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-17"
   },
-  "SKYY": {
+  "SOCL": {
     "ranks": [
-      21,
-      21,
-      21,
+      25,
+      25,
+      33,
+      25,
       21
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -354,50 +396,56 @@
     ],
     "rank": 21,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
+  },
+  "XBI": {
+    "ranks": [
+      18,
+      18,
+      17,
+      20,
+      22
+    ],
+    "quadrants": [
+      "Leading",
+      "Leading",
+      "Leading",
+      "Leading",
+      "Leading"
+    ],
+    "rank": 22,
+    "quadrant": "Leading",
+    "last_date": "2026-11-17"
   },
   "CIBR": {
     "ranks": [
       24,
       24,
       23,
-      22
+      22,
+      23
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
       "Lagging"
     ],
-    "rank": 22,
-    "quadrant": "Lagging",
-    "last_date": "2026-11-16"
-  },
-  "FINX": {
-    "ranks": [
-      20,
-      20,
-      20,
-      23
-    ],
-    "quadrants": [
-      "Improving",
-      "Improving",
-      "Improving",
-      "Improving"
-    ],
     "rank": 23,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "quadrant": "Lagging",
+    "last_date": "2026-11-17"
   },
-  "IGV": {
+  "SKYY": {
     "ranks": [
-      23,
-      23,
-      24,
+      21,
+      21,
+      21,
+      21,
       24
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -405,46 +453,51 @@
     ],
     "rank": 24,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "SOCL": {
+  "XME": {
     "ranks": [
-      25,
-      25,
       33,
+      33,
+      34,
+      34,
       25
     ],
     "quadrants": [
-      "Lagging",
-      "Lagging",
-      "Lagging",
-      "Lagging"
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 25,
-    "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-17"
   },
-  "TAN": {
+  "XLK": {
     "ranks": [
+      28,
       27,
       28,
       27,
       26
     ],
     "quadrants": [
-      "Leading",
-      "Leading",
-      "Leading",
-      "Leading"
+      "Lagging",
+      "Lagging",
+      "Lagging",
+      "Lagging",
+      "Lagging"
     ],
     "rank": 26,
-    "quadrant": "Leading",
-    "last_date": "2026-11-16"
+    "quadrant": "Lagging",
+    "last_date": "2026-11-17"
   },
-  "XLK": {
+  "WGMI": {
     "ranks": [
-      28,
-      27,
+      29,
+      29,
+      26,
       28,
       27
     ],
@@ -452,20 +505,23 @@
       "Lagging",
       "Lagging",
       "Lagging",
+      "Lagging",
       "Lagging"
     ],
     "rank": 27,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "WGMI": {
+  "DRAM": {
     "ranks": [
-      29,
-      29,
       26,
+      26,
+      25,
+      29,
       28
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -473,16 +529,18 @@
     ],
     "rank": 28,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "DRAM": {
+  "SMH": {
     "ranks": [
-      26,
-      26,
-      25,
+      31,
+      31,
+      29,
+      31,
       29
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -490,33 +548,37 @@
     ],
     "rank": 29,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "ICLN": {
+  "TAN": {
     "ranks": [
-      30,
-      30,
-      30,
+      27,
+      28,
+      27,
+      26,
       30
     ],
     "quadrants": [
-      "Improving",
-      "Improving",
-      "Improving",
-      "Improving"
+      "Leading",
+      "Leading",
+      "Leading",
+      "Leading",
+      "Leading"
     ],
     "rank": 30,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "quadrant": "Leading",
+    "last_date": "2026-11-17"
   },
-  "SMH": {
+  "IGV": {
     "ranks": [
-      31,
-      31,
-      29,
+      23,
+      23,
+      24,
+      24,
       31
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -524,33 +586,37 @@
     ],
     "rank": 31,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "BOTZ": {
+  "ICLN": {
     "ranks": [
-      32,
-      32,
-      32,
+      30,
+      30,
+      30,
+      30,
       32
     ],
     "quadrants": [
-      "Lagging",
-      "Lagging",
-      "Lagging",
-      "Lagging"
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving",
+      "Improving"
     ],
     "rank": 32,
-    "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "quadrant": "Improving",
+    "last_date": "2026-11-17"
   },
   "LYTE": {
     "ranks": [
       34,
       34,
       31,
+      33,
       33
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -558,27 +624,30 @@
     ],
     "rank": 33,
     "quadrant": "Lagging",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   },
-  "XME": {
+  "BOTZ": {
     "ranks": [
-      33,
-      33,
-      34,
+      32,
+      32,
+      32,
+      32,
       34
     ],
     "quadrants": [
-      "Improving",
-      "Improving",
-      "Improving",
-      "Improving"
+      "Lagging",
+      "Lagging",
+      "Lagging",
+      "Lagging",
+      "Lagging"
     ],
     "rank": 34,
-    "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "quadrant": "Lagging",
+    "last_date": "2026-11-17"
   },
   "COPX": {
     "ranks": [
+      35,
       35,
       35,
       35,
@@ -588,10 +657,11 @@
       "Improving",
       "Improving",
       "Improving",
+      "Improving",
       "Improving"
     ],
     "rank": 35,
     "quadrant": "Improving",
-    "last_date": "2026-11-16"
+    "last_date": "2026-11-17"
   }
 }
