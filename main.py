@@ -1,16 +1,14 @@
 import os
 import json
-from datetime import datetime
 import requests
 import yfinance as yf
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
-# ==========================================
-# 1. 監控標的設定 (共 35 檔 ETF)
-# ==========================================
+# ====================== 板塊定義 ======================
 CORE_SECTORS = {
     'XLK': '科技',
     'XLF': '金融',
@@ -55,205 +53,405 @@ THEMATIC_SECTORS = {
 SECTORS = {**CORE_SECTORS, **THEMATIC_SECTORS}
 BENCHMARK = 'SPY'
 HISTORY_FILE = 'history.json'
-tickers = list(SECTORS.keys()) + [BENCHMARK]
+MIN_BARS = 60
+MAX_RANK_GAP_DAYS = 4
 
+# ====================== 波動調整參數（Downside Vol） ======================
+TARGET_VOL = 0.18
+VOL_RATIO_MIN = 0.50
+VOL_RATIO_MAX = 2.00
+ALPHA = 0.60
+BLEND = 0.75
+DOWNSIDE_WINDOW = 20
+MIN_DOWNSIDE_SAMPLES = 5
 
-# ==========================================
-# 2. 歷史紀錄處理 (保留最近 30 日)
-# ==========================================
+# ====================== 歷史讀取 / 儲存 ======================
 def load_previous_history():
-    if os.path.exists(HISTORY_FILE):
-        try:
-            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                if data and isinstance(list(data.values())[0], int):
-                    new_data = {}
-                    for k, v in data.items():
-                        new_data[k] = {"ranks": [v], "quadrants": [None], "rank": v, "quadrant": None}
-                    return new_data
-                return data
-        except Exception as e:
-            print(f"讀取歷史紀錄失敗：{e}")
-    return {}
+    if not os.path.exists(HISTORY_FILE):
+        return {}
+    try:
+        with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if not data:
+            return {}
+        first_val = next(iter(data.values()))
+        if isinstance(first_val, int):
+            new_data = {}
+            for k, v in data.items():
+                new_data[k] = {
+                    "ranks": [v],
+                    "quadrants": [None],
+                    "rank": v,
+                    "quadrant": None,
+                    "last_date": None
+                }
+            return new_data
+        return data
+    except Exception as e:
+        print(f"讀取歷史紀錄失敗：{e}")
+        return {}
 
-def save_current_history(df_result):
+def save_current_history(df_result, trade_date: str):
     prev_data = load_previous_history()
     history_data = {}
-    
     for idx, row in df_result.iterrows():
         ticker = row['ticker']
-        curr_rank = idx + 1
+        curr_rank = int(idx + 1)
         curr_quad = row['quadrant']
-        
         item_hist = prev_data.get(ticker, {})
-        ranks = item_hist.get('ranks', [])
-        quadrants = item_hist.get('quadrants', [])
-        
-        ranks.append(curr_rank)
-        quadrants.append(curr_quad)
-        
-        ranks = ranks[-30:]
-        quadrants = quadrants[-30:]
-        
+        ranks = item_hist.get('ranks', []) + [curr_rank]
+        quadrants = item_hist.get('quadrants', []) + [curr_quad]
         history_data[ticker] = {
-            "ranks": ranks,
-            "quadrants": quadrants,
+            "ranks": ranks[-30:],
+            "quadrants": quadrants[-30:],
             "rank": curr_rank,
-            "quadrant": curr_quad
+            "quadrant": curr_quad,
+            "last_date": trade_date
         }
-        
     with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, ensure_ascii=False, indent=2)
 
+def is_history_fresh(item_hist: dict, today: datetime) -> bool:
+    last_date_str = item_hist.get('last_date')
+    if not last_date_str:
+        return False
+    try:
+        last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
+        return (today - last_date).days <= MAX_RANK_GAP_DAYS
+    except Exception:
+        return False
 
-# ==========================================
-# 3. 數據下載、大市環境與多週期加權計算
-# ==========================================
+# ====================== 資料下載與計算 ======================
 def calculate_rrg_and_rs():
-    print(f"正在下載 {len(SECTORS)} 個板塊 1 年數據並計算大市環境與加權動能...")
-    
+    print(f"正在下載 {len(SECTORS)} 個板塊數據（個別失敗會跳過）...")
+
     session = requests.Session()
     session.headers.update({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     })
-    
-    retries = Retry(
-        total=5,
-        backoff_factor=5,
-        status_forcelist=[429, 500, 502, 503, 504],
-        raise_on_status=False
-    )
+    retries = Retry(total=5, backoff_factor=5, status_forcelist=[429, 500, 502, 503, 504], raise_on_status=False)
     adapter = HTTPAdapter(max_retries=retries)
     session.mount('https://', adapter)
     session.mount('http://', adapter)
-    
+
     original_request = session.request
     def request_with_timeout(*args, **kwargs):
         kwargs.setdefault('timeout', 30)
         return original_request(*args, **kwargs)
     session.request = request_with_timeout
 
+    all_tickers = list(SECTORS.keys()) + [BENCHMARK]
     try:
-        data = yf.download(tickers, period='1y', session=session, progress=False)['Close']
+        raw = yf.download(all_tickers, period='1y', session=session, progress=False, threads=True)
+        if raw is None or raw.empty:
+            raise ValueError("Yahoo Finance 返回空資料")
+        data = raw['Close'] if isinstance(raw.columns, pd.MultiIndex) or 'Close' in getattr(raw, 'columns', []) else raw
+        if isinstance(data.columns, pd.MultiIndex):
+            data = raw['Close']
     except Exception as e:
-        raise RuntimeError(f"Yahoo Finance 數據下載失敗或連線逾時: {e}")
-    
-    if data is None or isinstance(data, pd.Series) or data.empty:
-        raise ValueError("❌ 錯誤：Yahoo Finance 下載返回的數據為空，可能被 Rate Limit (429) 封鎖，請稍後再試。")
+        raise RuntimeError(f"Yahoo Finance 下載失敗: {e}")
 
-    if BENCHMARK not in data.columns or len(data) < 200:
-        raise ValueError(f"❌ 錯誤：下載的 {BENCHMARK} 數據不足 200 筆（目前只有 {len(data)} 筆），無法計算 SMA200。")
-
-    # 🌐 1. 計算 SPY 大市環境 (SMA200)
-    spy_series = data[BENCHMARK].dropna()
-    spy_sma200 = spy_series.rolling(window=200).mean().iloc[-1]
-    spy_latest = spy_series.iloc[-1]
-    
-    if spy_latest >= spy_sma200:
-        market_regime = "🟢 大市環境：多頭牛市 (SPY 企穩 SMA200)"
-    else:
-        market_regime = "🔴 大市環境：空頭警戒 (SPY 跌破 SMA200)"
-
-    # 🌐 2. 計算 RRG
-    ratios = pd.DataFrame()
+    # 個別 ticker 有效性檢查
+    valid_tickers = []
+    skipped = []
     for t in SECTORS.keys():
-        if t in data.columns:
-            ratios[t] = data[t] / data[BENCHMARK]
+        if t not in data.columns:
+            skipped.append(f"{t}(無欄位)")
+            continue
+        series = data[t].dropna()
+        if len(series) < MIN_BARS:
+            skipped.append(f"{t}(僅{len(series)}根)")
+            continue
+        valid_tickers.append(t)
 
+    if BENCHMARK not in data.columns or data[BENCHMARK].dropna().shape[0] < 200:
+        raise ValueError(f"基準 {BENCHMARK} 資料不足，無法繼續")
+
+    if skipped:
+        print(f"⚠️ 已跳過 {len(skipped)} 檔：{', '.join(skipped)}")
+    print(f"✅ 有效標的：{len(valid_tickers)} 檔")
+
+    # 大市環境
+    spy_series = data[BENCHMARK].dropna()
+    spy_sma200 = spy_series.rolling(200).mean().iloc[-1]
+    spy_latest = spy_series.iloc[-1]
+    market_regime = (
+        "🟢 大市環境：多頭牛市 (SPY 企穩 SMA200)"
+        if spy_latest >= spy_sma200
+        else "🔴 大市環境：空頭警戒 (SPY 跌破 SMA200)"
+    )
+    trade_date = spy_series.index[-1].strftime("%Y-%m-%d")
+
+    # 相對強度線 + 自訂動能象限
+    ratios = pd.DataFrame({t: data[t] / data[BENCHMARK] for t in valid_tickers})
     rs_ratio = pd.DataFrame()
     rs_momentum = pd.DataFrame()
-
-    for t in SECTORS.keys():
-        if t in ratios.columns:
-            series = ratios[t]
-            sma_short = series.rolling(window=10).mean()
-            sma_long = series.rolling(window=50).mean()
-            rs_ratio[t] = 100 * (sma_short / sma_long)
-            
-            mom_short = rs_ratio[t].rolling(window=5).mean()
-            mom_long = rs_ratio[t].rolling(window=20).mean()
-            rs_momentum[t] = 100 * (mom_short / mom_long)
+    for t in valid_tickers:
+        series = ratios[t].dropna()
+        sma_short = series.rolling(10).mean()
+        sma_long = series.rolling(50).mean()
+        rs_ratio[t] = 100 * (sma_short / sma_long)
+        mom_short = rs_ratio[t].rolling(5).mean()
+        mom_long = rs_ratio[t].rolling(20).mean()
+        rs_momentum[t] = 100 * (mom_short / mom_long)
 
     latest_ratio = rs_ratio.iloc[-1]
     latest_mom = rs_momentum.iloc[-1]
 
-    # 🌐 3. 計算多週期相對回報率：1D (1), 5D (5), 2W (10), 1M (21)
+    # 多週期相對報酬
     ret_1d = data.pct_change(1).iloc[-1]
     ret_5d = data.pct_change(5).iloc[-1]
     ret_2w = data.pct_change(10).iloc[-1]
     ret_1m = data.pct_change(21).iloc[-1]
-
     spy_1d = ret_1d[BENCHMARK]
     spy_5d = ret_5d[BENCHMARK]
     spy_2w = ret_2w[BENCHMARK]
     spy_1m = ret_1m[BENCHMARK]
 
+    daily_rets = data.pct_change()
+
     results = []
-    for t, name in SECTORS.items():
-        if t in data.columns:
-            e1d = (ret_1d[t] - spy_1d) * 100
-            e5d = (ret_5d[t] - spy_5d) * 100
-            e2w = (ret_2w[t] - spy_2w) * 100
-            e1m = (ret_1m[t] - spy_1m) * 100
-            
-            # 短線加權綜合得分 (1D:10%, 5D:30%, 2W:30%, 1M:30%)
-            weighted_score = (e1d * 0.10) + (e5d * 0.30) + (e2w * 0.30) + (e1m * 0.30)
-            
-            r_ratio = float(latest_ratio.get(t, 100.0))
-            r_mom = float(latest_mom.get(t, 100.0))
+    for t in valid_tickers:
+        e1d = (ret_1d[t] - spy_1d) * 100
+        e5d = (ret_5d[t] - spy_5d) * 100
+        e2w = (ret_2w[t] - spy_2w) * 100
+        e1m = (ret_1m[t] - spy_1m) * 100
 
-            if r_ratio >= 100 and r_mom >= 100:
-                quadrant = "Leading"
-                quad_emoji = "🟢"
-            elif r_ratio < 100 and r_mom >= 100:
-                quadrant = "Improving"
-                quad_emoji = "🔵"
-            elif r_ratio >= 100 and r_mom < 100:
-                quadrant = "Weakening"
-                quad_emoji = "🟡"
-            else:
-                quadrant = "Lagging"
-                quad_emoji = "🔴"
+        raw_score = (e1d * 0.10) + (e5d * 0.30) + (e2w * 0.30) + (e1m * 0.30)
 
-            results.append({
-                'ticker': t,
-                'name': name,
-                'group': 'core' if t in CORE_SECTORS else 'thematic',
-                'rel_1d': e1d,
-                'rel_5d': e5d,
-                'rel_2w': e2w,
-                'rel_1m': e1m,
-                'weighted_score': weighted_score,
-                'r_ratio': r_ratio,
-                'r_mom': r_mom,
-                'quadrant': quadrant,
-                'quad_emoji': quad_emoji
-            })
+        # ---------- Downside Volatility ----------
+        rets = daily_rets[t].dropna().iloc[-DOWNSIDE_WINDOW:]
+        downside = rets[rets < 0]
+        total_vol = rets.std() * np.sqrt(252) if len(rets) > 5 else np.nan
+
+        if len(downside) >= MIN_DOWNSIDE_SAMPLES:
+            down_vol = np.sqrt((downside ** 2).mean()) * np.sqrt(252)
+        else:
+            down_vol = total_vol
+
+        if pd.isna(down_vol) or down_vol <= 1e-6:
+            adj_score = raw_score
+            vol_ratio = 1.0
+            used_vol = np.nan
+        else:
+            vol_ratio = float(np.clip(down_vol / TARGET_VOL, VOL_RATIO_MIN, VOL_RATIO_MAX))
+            risk_adj = raw_score / (vol_ratio ** ALPHA)
+            adj_score = raw_score * (1 - BLEND) + risk_adj * BLEND
+            used_vol = down_vol
+
+        consistency = sum([e1d > 0, e5d > 0, e2w > 0, e1m > 0])
+
+        r_ratio = float(latest_ratio.get(t, 100.0))
+        r_mom = float(latest_mom.get(t, 100.0))
+
+        if r_ratio >= 100 and r_mom >= 100:
+            quadrant, quad_emoji = "Leading", "🟢"
+        elif r_ratio < 100 and r_mom >= 100:
+            quadrant, quad_emoji = "Improving", "🔵"
+        elif r_ratio >= 100 and r_mom < 100:
+            quadrant, quad_emoji = "Weakening", "🟡"
+        else:
+            quadrant, quad_emoji = "Lagging", "🔴"
+
+        results.append({
+            'ticker': t,
+            'name': SECTORS[t],
+            'group': 'core' if t in CORE_SECTORS else 'thematic',
+            'rel_1d': e1d,
+            'rel_5d': e5d,
+            'rel_2w': e2w,
+            'rel_1m': e1m,
+            'raw_score': raw_score,
+            'adj_score': adj_score,
+            'vol_ratio': vol_ratio,
+            'consistency': consistency,
+            'down_vol': used_vol * 100 if not pd.isna(used_vol) else np.nan,
+            'total_vol': total_vol * 100 if not pd.isna(total_vol) else np.nan,
+            'r_ratio': r_ratio,
+            'r_mom': r_mom,
+            'quadrant': quadrant,
+            'quad_emoji': quad_emoji
+        })
 
     df_rs = pd.DataFrame(results)
-    df_rs = df_rs.sort_values(by='weighted_score', ascending=False).reset_index(drop=True)
-    return df_rs, market_regime
+    df_rs = df_rs.sort_values(by='adj_score', ascending=False).reset_index(drop=True)
+    return df_rs, market_regime, trade_date
 
-
-# ==========================================
-# 4. 表格格式化與 Discord 雙 Embed 發送
-# ==========================================
-def format_rank_change(current_rank, prev_rank):
-    if prev_rank is None:
+# ====================== 排名變化與表格 ======================
+def format_rank_change(current_rank, prev_rank, is_fresh: bool):
+    if not is_fresh or prev_rank is None:
         return "NEW"
     diff = prev_rank - current_rank
     if diff > 0:
         return f"▲{diff}"
-    elif diff < 0:
+    if diff < 0:
         return f"▼{abs(diff)}"
-    else:
-        return "─"
+    return "─"
 
 def get_quadrant_emoji(quad):
-    mapping = {
-        "Leading": "🟢",
-        "Improving": "🔵",
-        "Weakening": "🟡",
-        "Lagging": "🔴"
+    return {"Leading": "🟢", "Improving": "🔵", "Weakening": "🟡", "Lagging": "🔴"}.get(quad, "⚪")
+
+def generate_table_lines(sub_df, prev_history, today: datetime):
+    header = (
+        f"{'名':<3}{'變':<4}{'ETF':<6}{'名稱':<8}{'象限':<10}"
+        f"{'1D':<6}{'5D':<6}{'2W':<6}{'1M':<6}"
+        f"{'一致':<4}{'下波':<5}{'品質':<8}"
+    )
+    lines = [header, "-" * 78]
+    rotations = []
+
+    for _, row in sub_df.iterrows():
+        rank = int(row['global_rank'])
+        ticker = row['ticker']
+        item_hist = prev_history.get(ticker, {})
+        past_ranks = item_hist.get('ranks', [])
+        past_quads = item_hist.get('quadrants', [])
+        prev_rank = past_ranks[-1] if past_ranks else None
+        prev_quad = past_quads[-1] if past_quads else None
+        fresh = is_history_fresh(item_hist, today)
+
+        change_str = format_rank_change(rank, prev_rank, fresh)
+        name = row['name']
+        emoji = row['quad_emoji']
+        quad = row['quadrant']
+
+        full_ranks = past_ranks + [rank]
+        full_quads = past_quads + [quad]
+        ranks_5d = full_ranks[-5:]
+        avg_rank_5d = sum(ranks_5d) / len(ranks_5d) if ranks_5d else rank
+        rank_std = np.std(ranks_5d) if len(ranks_5d) > 1 else 0.0
+
+        leading_days = 0
+        for q in reversed(full_quads):
+            if q == "Leading":
+                leading_days += 1
+            else:
+                break
+
+        if quad == "Leading":
+            quality_str = "剛轉強⭐" if leading_days <= 2 else f"長期強({leading_days}d)"
+        elif rank_std > 3.5:
+            quality_str = "忽上忽下"
+        elif avg_rank_5d < rank - 1:
+            quality_str = "穩步上升"
+        elif avg_rank_5d > rank + 1:
+            quality_str = "回落中"
+        else:
+            quality_str = "橫盤"
+
+        if prev_quad and prev_quad != quad and fresh:
+            rotations.append(
+                f"• **{ticker} ({name})**: {get_quadrant_emoji(prev_quad)} `{prev_quad}` ➔ {emoji} `{quad}`"
+            )
+
+        vol_str = f"{row['down_vol']:.0f}%" if not pd.isna(row['down_vol']) else "N/A"
+        line = (
+            f"{rank:<3}{change_str:<4}{ticker:<6}{name:<8}{emoji}{quad[:7]:<9}"
+            f"{row['rel_1d']:+.1f}% {row['rel_5d']:+.1f}% {row['rel_2w']:+.1f}% {row['rel_1m']:+.1f}% "
+            f"{row['consistency']}/4  {vol_str:<5}{quality_str:<8}"
+        )
+        lines.append(line)
+
+    return lines, rotations
+
+def split_into_fields(title_prefix: str, lines: list, max_len: int = 1000):
+    fields = []
+    current_chunk, current_len, part = [], 0, 1
+    for line in lines:
+        add_len = len(line) + 1
+        if current_chunk and current_len + add_len > max_len:
+            name = title_prefix if part == 1 else f"{title_prefix}（續{part}）"
+            fields.append({
+                "name": name,
+                "value": "```text\n" + "\n".join(current_chunk) + "\n```",
+                "inline": False
+            })
+            part += 1
+            current_chunk = [line]
+            current_len = add_len
+        else:
+            current_chunk.append(line)
+            current_len += add_len
+    if current_chunk:
+        name = title_prefix if part == 1 else f"{title_prefix}（續{part}）"
+        fields.append({
+            "name": name,
+            "value": "```text\n" + "\n".join(current_chunk) + "\n```",
+            "inline": False
+        })
+    return fields
+
+# ====================== Discord ======================
+def send_to_discord(df, prev_history, market_regime, trade_date: str):
+    webhook_url = os.environ.get('DISCORD_WEBHOOK_URL')
+    if not webhook_url:
+        print("錯誤：未設定 DISCORD_WEBHOOK_URL")
+        return
+
+    today = datetime.strptime(trade_date, "%Y-%m-%d")
+    df = df.copy()
+    df['global_rank'] = np.arange(1, len(df) + 1)
+
+    df_core = df[df['group'] == 'core']
+    df_thematic = df[df['group'] == 'thematic']
+
+    lines_core, rot_core = generate_table_lines(df_core, prev_history, today)
+    lines_thematic, rot_thematic = generate_table_lines(df_thematic, prev_history, today)
+    all_rotations = rot_core + rot_thematic
+
+    rotation_text = "\n".join(all_rotations) if all_rotations else "*今日暫無跨象限轉倉*"
+    quad_counts = df['quadrant'].value_counts()
+    breadth = (
+        f"🟢 Leading `{quad_counts.get('Leading', 0)}` | "
+        f"🔵 Improving `{quad_counts.get('Improving', 0)}` | "
+        f"🟡 Weakening `{quad_counts.get('Weakening', 0)}` | "
+        f"🔴 Lagging `{quad_counts.get('Lagging', 0)}`"
+    )
+
+    fields_core = [
+        {"name": "大市環境", "value": market_regime, "inline": False},
+        {"name": "🔄 自訂動能象限轉倉", "value": rotation_text[:1000], "inline": False},
+    ]
+    fields_core.extend(split_into_fields("核心板塊排名（下行波動調整）", lines_core))
+
+    embed_core = {
+        "title": f"📊 美股核心板塊監控 ({trade_date})",
+        "color": 3066993,
+        "fields": fields_core
     }
-    return mapping.get(quad, "⚪")
+
+    fields_thematic = split_into_fields("前沿主題排名（下行波動調整）", lines_thematic)
+    fields_thematic.append({
+        "name": "📈 象限分佈 & 說明",
+        "value": (
+            f"{breadth}\n\n"
+            f"**排序**：下行波動調整得分（Sortino 概念）\n"
+            f"**一致**：1D/5D/2W/1M 同時跑贏 SPY 的週期數\n"
+            f"**下波**：近20日下行年化波動\n"
+            f"**象限**：自訂動能象限（非經典 RRG）"
+        ),
+        "inline": False
+    })
+
+    embed_thematic = {
+        "title": f"🚀 前沿主題監控 ({trade_date})",
+        "color": 3447003,
+        "fields": fields_thematic,
+        "footer": {
+            "text": "短線模型 1D10%+5D30%+2W30%+1M30% | Downside Vol 調整 | 自訂動能象限"
+        }
+    }
+
+    resp = requests.post(webhook_url, json={"embeds": [embed_core, embed_thematic]})
+    if resp.status_code == 204:
+        print("✅ 成功發送到 Discord")
+    else:
+        print(f"❌ 發送失敗 {resp.status_code}: {resp.text}")
+
+# ====================== 主程式 ======================
+if __name__ == "__main__":
+    prev_history = load_previous_history()
+    df_result, market_regime, trade_date = calculate_rrg_and_rs()
+    send_to_discord(df_result, prev_history, market_regime, trade_date)
+    save_current_history(df_result, trade_date)
+    print(f"完成。交易日：{trade_date}，有效標的：{len(df_result)}")
