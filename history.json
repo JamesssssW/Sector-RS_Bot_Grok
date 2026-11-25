@@ -23,9 +23,11 @@
       10,
       10,
       4,
+      1,
       1
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -78,9 +80,11 @@
       3,
       3,
       1,
+      2,
       2
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -133,9 +137,11 @@
       5,
       5,
       3,
+      3,
       3
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -188,9 +194,11 @@
       1,
       1,
       2,
+      4,
       4
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -243,9 +251,11 @@
       9,
       9,
       6,
+      5,
       5
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -298,9 +308,11 @@
       17,
       17,
       7,
+      6,
       6
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -353,9 +365,11 @@
       13,
       13,
       5,
+      7,
       7
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -408,9 +422,11 @@
       8,
       8,
       8,
+      8,
       8
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -463,9 +479,11 @@
       4,
       4,
       9,
+      9,
       9
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -518,9 +536,11 @@
       2,
       2,
       10,
+      10,
       10
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -573,6 +593,7 @@
       12,
       12,
       11,
+      11,
       11
     ],
     "quadrants": [
@@ -587,6 +608,7 @@
       "Leading",
       "Leading",
       "Improving",
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -628,9 +650,11 @@
       16,
       16,
       12,
+      12,
       12
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -683,9 +707,11 @@
       15,
       15,
       14,
+      13,
       13
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -738,9 +764,11 @@
       18,
       18,
       16,
+      14,
       14
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -793,9 +821,11 @@
       11,
       11,
       18,
+      15,
       15
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -848,9 +878,11 @@
       7,
       7,
       19,
+      16,
       16
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -903,9 +935,11 @@
       6,
       6,
       15,
+      17,
       17
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -958,9 +992,11 @@
       20,
       20,
       17,
+      18,
       18
     ],
     "quadrants": [
+      "Leading",
       "Leading",
       "Leading",
       "Leading",
@@ -1013,9 +1049,11 @@
       14,
       14,
       13,
+      19,
       19
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1047,9 +1085,11 @@
   "BOTZ": {
     "ranks": [
       21,
+      20,
       20
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging"
     ],
@@ -1081,9 +1121,11 @@
       27,
       26,
       20,
+      21,
       21
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1136,6 +1178,7 @@
       28,
       27,
       23,
+      22,
       22
     ],
     "quadrants": [
@@ -1160,6 +1203,7 @@
       "Lagging",
       "Lagging",
       "Lagging",
+      "Weakening",
       "Weakening",
       "Weakening"
     ],
@@ -1191,9 +1235,11 @@
       29,
       28,
       24,
+      23,
       23
     ],
     "quadrants": [
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
@@ -1246,9 +1292,11 @@
       24,
       24,
       22,
+      24,
       24
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1301,9 +1349,11 @@
       26,
       25,
       25,
+      25,
       25
     ],
     "quadrants": [
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
@@ -1356,9 +1406,11 @@
       23,
       23,
       28,
+      26,
       26
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1411,9 +1463,11 @@
       32,
       31,
       26,
+      27,
       27
     ],
     "quadrants": [
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
@@ -1466,6 +1520,7 @@
       31,
       30,
       27,
+      28,
       28
     ],
     "quadrants": [
@@ -1480,6 +1535,7 @@
       "Improving",
       "Improving",
       "Lagging",
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
@@ -1521,9 +1577,11 @@
       30,
       29,
       29,
+      29,
       29
     ],
     "quadrants": [
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
@@ -1576,9 +1634,11 @@
       21,
       21,
       30,
+      30,
       30
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1631,6 +1691,7 @@
       35,
       34,
       31,
+      31,
       31
     ],
     "quadrants": [
@@ -1645,6 +1706,7 @@
       "Improving",
       "Improving",
       "Leading",
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
@@ -1686,9 +1748,11 @@
       22,
       22,
       32,
+      32,
       32
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1741,9 +1805,11 @@
       19,
       19,
       33,
+      33,
       33
     ],
     "quadrants": [
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1796,6 +1862,7 @@
       34,
       33,
       34,
+      34,
       34
     ],
     "quadrants": [
@@ -1816,6 +1883,7 @@
       "Improving",
       "Lagging",
       "Improving",
+      "Lagging",
       "Lagging",
       "Lagging",
       "Lagging",
@@ -1851,6 +1919,7 @@
       33,
       32,
       35,
+      35,
       35
     ],
     "quadrants": [
@@ -1872,6 +1941,7 @@
       "Lagging",
       "Lagging",
       "Lagging",
+      "Improving",
       "Improving",
       "Improving",
       "Improving",
