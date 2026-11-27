@@ -1,51 +1,21 @@
 {
-  "PTC": {
+  "TRV": {
     "records": [
       {
         "date": "2026-11-27",
         "rank": 1,
         "bucket": "buy",
-        "rs": 99
+        "rs": 97
       }
     ]
   },
-  "TECH": {
+  "BRK-B": {
     "records": [
       {
         "date": "2026-11-27",
         "rank": 2,
         "bucket": "buy",
-        "rs": 99
-      }
-    ]
-  },
-  "TRV": {
-    "records": [
-      {
-        "date": "2026-11-27",
-        "rank": 3,
-        "bucket": "buy",
-        "rs": 97
-      }
-    ]
-  },
-  "LH": {
-    "records": [
-      {
-        "date": "2026-11-27",
-        "rank": 4,
-        "bucket": "buy",
-        "rs": 96
-      }
-    ]
-  },
-  "DGX": {
-    "records": [
-      {
-        "date": "2026-11-27",
-        "rank": 5,
-        "bucket": "buy",
-        "rs": 96
+        "rs": 94
       }
     ]
   },
@@ -53,7 +23,7 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 6,
+        "rank": 3,
         "bucket": "buy",
         "rs": 96
       }
@@ -63,19 +33,9 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 7,
+        "rank": 4,
         "bucket": "buy",
         "rs": 96
-      }
-    ]
-  },
-  "BRK-B": {
-    "records": [
-      {
-        "date": "2026-11-27",
-        "rank": 8,
-        "bucket": "buy",
-        "rs": 93
       }
     ]
   },
@@ -83,7 +43,7 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 9,
+        "rank": 5,
         "bucket": "buy",
         "rs": 94
       }
@@ -93,9 +53,49 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 10,
+        "rank": 6,
         "bucket": "buy",
         "rs": 98
+      }
+    ]
+  },
+  "CTAS": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 7,
+        "bucket": "buy",
+        "rs": 97
+      }
+    ]
+  },
+  "EG": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 8,
+        "bucket": "buy",
+        "rs": 98
+      }
+    ]
+  },
+  "PG": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 9,
+        "bucket": "buy",
+        "rs": 96
+      }
+    ]
+  },
+  "ALLE": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 10,
+        "bucket": "buy",
+        "rs": 97
       }
     ]
   },
@@ -105,7 +105,7 @@
         "date": "2026-11-27",
         "rank": 1,
         "bucket": "watch",
-        "rs": 85
+        "rs": 86
       }
     ]
   }
