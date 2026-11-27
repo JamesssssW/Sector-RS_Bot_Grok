@@ -95,7 +95,7 @@ def fetch_us_stock_universe():
 
 
 # ==========================================
-# 3. 歷史上榜紀錄處理（按美股交易日去重，追蹤新上榜與連霸天數）
+# 3. 歷史上榜紀錄處理（按美股交易日去重，追蹤新上榜與排名變化）
 # ==========================================
 def load_previous_history():
     if os.path.exists(HISTORY_FILE):
@@ -133,52 +133,81 @@ def save_current_history(buy_df, watch_df, trade_date):
 
 
 # ==========================================
-# 4. 分批安全下載行情與大市環境計算
+# 4. 分批安全下載行情（防 SQLite 鎖死＋自動單線程補抓）
 # ==========================================
-def download_ohlcv_in_batches(ticker_list, batch_size=100):
-    """分批下載 1 年日線數據，避免一次過拉取 500+ 檔遭 Yahoo Finance 限流"""
+def download_ohlcv_in_batches(ticker_list, batch_size=50):
+    """分批下載 1 年日線數據，限制並發防 SQLite database is locked，並自動補抓失敗標的"""
     close_parts, high_parts, low_parts, vol_parts = [], [], [], []
+
+    def _fetch_chunk(chunk, threads_opt):
+        raw = yf.download(
+            chunk,
+            period='1y',
+            progress=False,
+            auto_adjust=True,
+            threads=threads_opt
+        )
+        if raw is None or raw.empty:
+            return
+        if isinstance(raw.columns, pd.MultiIndex):
+            close_parts.append(raw['Close'])
+            high_parts.append(raw['High'])
+            low_parts.append(raw['Low'])
+            vol_parts.append(raw['Volume'])
+        else:
+            sym = chunk[0]
+            close_parts.append(raw[['Close']].rename(columns={'Close': sym}))
+            high_parts.append(raw[['High']].rename(columns={'High': sym}))
+            low_parts.append(raw[['Low']].rename(columns={'Low': sym}))
+            vol_parts.append(raw[['Volume']].rename(columns={'Volume': sym}))
+
+    def _merge(parts):
+        # 先移除全空失敗欄位，合併後保留最新有效補抓結果
+        cleaned = [p.dropna(axis=1, how='all') for p in parts if p is not None and not p.empty]
+        if not cleaned:
+            return pd.DataFrame()
+        df = pd.concat(cleaned, axis=1)
+        df.index = pd.to_datetime(df.index).tz_localize(None)
+        return df.loc[:, ~df.columns.duplicated(keep='last')]
 
     for i in range(0, len(ticker_list), batch_size):
         chunk = ticker_list[i:i + batch_size]
         print(f"正在下載第 {i + 1}–{min(i + batch_size, len(ticker_list))} 檔行情...")
         try:
-            raw = yf.download(
-                chunk,
-                period='1y',
-                progress=False,
-                auto_adjust=True,
-                threads=True
-            )
-            if raw is None or raw.empty:
-                continue
-
-            if isinstance(raw.columns, pd.MultiIndex):
-                close_parts.append(raw['Close'])
-                high_parts.append(raw['High'])
-                low_parts.append(raw['Low'])
-                vol_parts.append(raw['Volume'])
-            else:
-                sym = chunk[0]
-                close_parts.append(raw[['Close']].rename(columns={'Close': sym}))
-                high_parts.append(raw[['High']].rename(columns={'High': sym}))
-                low_parts.append(raw[['Low']].rename(columns={'Low': sym}))
-                vol_parts.append(raw[['Volume']].rename(columns={'Volume': sym}))
+            # 限制最多 4 條並發線程，避開 yfinance 內部 SQLite 快取鎖死
+            _fetch_chunk(chunk, threads_opt=4)
         except Exception as e:
             print(f"⚠️ 批次 {i // batch_size + 1} 下載異常：{e}")
 
         if i + batch_size < len(ticker_list):
             time.sleep(0.8)
 
-    if not close_parts:
+    close_df = _merge(close_parts)
+    high_df = _merge(high_parts)
+    low_df = _merge(low_parts)
+    vol_df = _merge(vol_parts)
+
+    if close_df.empty:
         raise RuntimeError("❌ Yahoo Finance 全部批次下載失敗，無可用數據。")
 
-    def _merge(parts):
-        df = pd.concat(parts, axis=1)
-        df.index = pd.to_datetime(df.index).tz_localize(None)
-        return df.loc[:, ~df.columns.duplicated()]
+    # 偵測漏抓或全空標的（例如曾報 database is locked 嘅個股），用單線程安全補抓一次
+    missing_syms = [
+        t for t in ticker_list
+        if t not in close_df.columns or close_df[t].dropna().empty
+    ]
+    if missing_syms and len(missing_syms) <= 30:
+        print(f"🔄 正在單線程補抓 {len(missing_syms)} 檔下載失敗標的：{', '.join(missing_syms)}")
+        time.sleep(1.0)
+        try:
+            _fetch_chunk(missing_syms, threads_opt=False)
+            close_df = _merge(close_parts)
+            high_df = _merge(high_parts)
+            low_df = _merge(low_parts)
+            vol_df = _merge(vol_parts)
+        except Exception as e:
+            print(f"⚠️ 補抓失敗（已略過）：{e}")
 
-    return _merge(close_parts), _merge(high_parts), _merge(low_parts), _merge(vol_parts)
+    return close_df, high_df, low_df, vol_df
 
 
 def get_earnings_warning(ticker):
@@ -283,9 +312,9 @@ def run_stock_screener():
     macro_tickers = [BENCHMARK, EQUAL_WEIGHT_BENCHMARK, VIX_TICKER, VIX3M_TICKER]
     all_symbols = sorted(set(universe + macro_tickers))
 
-    close_raw, high_raw, low_raw, vol_raw = download_ohlcv_in_batches(all_symbols, batch_size=100)
+    close_raw, high_raw, low_raw, vol_raw = download_ohlcv_in_batches(all_symbols, batch_size=50)
 
-    if BENCHMARK not in close_raw.columns:
+    if BENCHMARK not in close_raw.columns or close_raw[BENCHMARK].dropna().empty:
         raise ValueError(f"❌ 無法取得基準 {BENCHMARK} 數據。")
 
     raw_vix = close_raw[VIX_TICKER].dropna() if VIX_TICKER in close_raw.columns else pd.Series(dtype=float)
@@ -306,38 +335,56 @@ def run_stock_screener():
 
     # 計算全體股票池多週期回報與 20 日波幅（IBD 風格中短期動能權重：1M 25% + 3M 35% + 6M 25% + 9M 15%）
     daily_ret = close_df.pct_change(1, fill_method=None)
-    vol_20d_daily = (daily_ret.rolling(20).std().iloc[-1] * 100.0).clip(lower=0.5)
+    vol_20d_daily = (daily_ret.rolling(20, min_periods=10).std().iloc[-1] * 100.0).clip(lower=0.5)
 
     r_1m = close_df.pct_change(21, fill_method=None).iloc[-1]
     r_3m = close_df.pct_change(63, fill_method=None).iloc[-1]
     r_6m = close_df.pct_change(126, fill_method=None).iloc[-1]
     r_9m = close_df.pct_change(189, fill_method=None).iloc[-1]
 
-    spy_1m, spy_3m, spy_6m, spy_9m = r_1m[BENCHMARK], r_3m[BENCHMARK], r_6m[BENCHMARK], r_9m[BENCHMARK]
+    spy_1m = float(r_1m[BENCHMARK]) if pd.notna(r_1m[BENCHMARK]) else 0.0
+    spy_3m = float(r_3m[BENCHMARK]) if pd.notna(r_3m[BENCHMARK]) else 0.0
+    spy_6m = float(r_6m[BENCHMARK]) if pd.notna(r_6m[BENCHMARK]) else spy_3m
+    spy_9m = float(r_9m[BENCHMARK]) if pd.notna(r_9m[BENCHMARK]) else spy_6m
 
-    # Step A：對全體有效股票計算 Risk-Adjusted RS，映射為 1–99 IBD 評分
+    # Step A：對全體有效股票計算 Risk-Adjusted RS，嚴格過濾 NaN / inf 後映射為 1–99 IBD 評分
     raw_rs_map = {}
     for t in universe:
         if t not in close_df.columns or pd.isna(close_df[t].iloc[-1]):
             continue
         if pd.isna(r_3m.get(t)):
             continue
-        e1m = float((r_1m[t] - spy_1m) * 100) if pd.notna(r_1m[t]) else 0.0
-        e3m = float((r_3m[t] - spy_3m) * 100) if pd.notna(r_3m[t]) else 0.0
-        e6m = float((r_6m[t] - spy_6m) * 100) if pd.notna(r_6m[t]) else e3m
-        e9m = float((r_9m[t] - spy_9m) * 100) if pd.notna(r_9m[t]) else e6m
+        vol_val = vol_20d_daily.get(t)
+        if pd.isna(vol_val) or not np.isfinite(vol_val) or float(vol_val) <= 0:
+            continue
+
+        e1m = float((r_1m[t] - spy_1m) * 100) if pd.notna(r_1m.get(t)) else 0.0
+        e3m = float((r_3m[t] - spy_3m) * 100) if pd.notna(r_3m.get(t)) else 0.0
+        e6m = float((r_6m[t] - spy_6m) * 100) if pd.notna(r_6m.get(t)) else e3m
+        e9m = float((r_9m[t] - spy_9m) * 100) if pd.notna(r_9m.get(t)) else e6m
 
         weighted_excess = (e1m * 0.25) + (e3m * 0.35) + (e6m * 0.25) + (e9m * 0.15)
-        raw_rs_map[t] = weighted_excess / float(vol_20d_daily[t])
+        score = weighted_excess / float(vol_val)
+        if np.isfinite(score):
+            raw_rs_map[t] = score
 
-    rs_series = pd.Series(raw_rs_map)
+    rs_series = pd.Series(raw_rs_map, dtype=float).replace([np.inf, -np.inf], np.nan).dropna()
+    if rs_series.empty:
+        raise ValueError("❌ 錯誤：無法計算任何有效個股嘅 RS 分數，請檢查行情數據源。")
+
     n_valid = len(rs_series)
     asc_rank = rs_series.rank(method='average', ascending=True)
-    rs_rating_map = (1 + (asc_rank - 1) / max(n_valid - 1, 1) * 98).round().astype(int).clip(1, 99).to_dict()
+    rs_rating_map = (
+        (1 + (asc_rank - 1) / max(n_valid - 1, 1) * 98)
+        .round()
+        .clip(1, 99)
+        .astype(int)
+        .to_dict()
+    )
 
     # Step B：逐檔執行 Minervini 趨勢模板、流動性、量價收斂與買點打分
     passed_trend = []
-    for t, raw_rs in raw_rs_map.items():
+    for t, raw_rs in rs_series.items():
         rs_rating = rs_rating_map.get(t, 1)
         if rs_rating < MIN_RS_RATING:
             continue
@@ -345,12 +392,12 @@ def run_stock_screener():
         c = close_df[t].dropna()
         if len(c) < 200:
             continue
-        h = high_df[t].reindex(c.index)
-        l = low_df[t].reindex(c.index)
-        v = vol_df[t].reindex(c.index)
+        h = high_df[t].reindex(c.index).ffill()
+        l = low_df[t].reindex(c.index).ffill()
+        v = vol_df[t].reindex(c.index).fillna(0.0)
 
         price = float(c.iloc[-1])
-        if price < MIN_PRICE:
+        if not np.isfinite(price) or price < MIN_PRICE:
             continue
 
         avg_vol_20 = float(v.tail(20).mean())
@@ -365,6 +412,9 @@ def run_stock_screener():
         sma200 = float(sma200_series.iloc[-1])
         sma200_prev20 = float(sma200_series.iloc[-21]) if len(sma200_series) >= 220 else sma200
 
+        if any(pd.isna(x) or not np.isfinite(x) for x in (ema21, sma50, sma150, sma200, sma200_prev20)):
+            continue
+
         # Minervini 核心多頭趨勢模板
         if not (price > sma50 > sma150 > sma200):
             continue
@@ -373,8 +423,11 @@ def run_stock_screener():
 
         high_52w = float(h.tail(252).max())
         low_52w = float(l.tail(252).min())
-        dist_high_pct = ((high_52w - price) / high_52w * 100.0) if high_52w > 0 else 100.0
-        above_low_pct = ((price - low_52w) / low_52w * 100.0) if low_52w > 0 else 0.0
+        if pd.isna(high_52w) or pd.isna(low_52w) or high_52w <= 0 or low_52w <= 0:
+            continue
+
+        dist_high_pct = (high_52w - price) / high_52w * 100.0
+        above_low_pct = (price - low_52w) / low_52w * 100.0
 
         if dist_high_pct > MAX_DIST_52W_HIGH_PCT or above_low_pct < MIN_ABOVE_52W_LOW_PCT:
             continue
@@ -382,7 +435,11 @@ def run_stock_screener():
         # 14 日 Wilder ATR 與 1% 單筆風險倉位計算
         prev_c = c.shift(1)
         tr = pd.concat([h - l, (h - prev_c).abs(), (l - prev_c).abs()], axis=1).max(axis=1)
-        atr_14 = float(tr.ewm(alpha=1 / ATR_PERIOD, min_periods=ATR_PERIOD, adjust=False).mean().iloc[-1])
+        atr_val = tr.ewm(alpha=1 / ATR_PERIOD, min_periods=ATR_PERIOD, adjust=False).mean().iloc[-1]
+        if pd.isna(atr_val) or not np.isfinite(atr_val):
+            continue
+
+        atr_14 = float(atr_val)
         stop_price = max(price - ATR_MULTIPLIER * atr_14, 0.0)
         stop_pct = ((price - stop_price) / price * 100.0) if price > 0 else 8.0
 
@@ -395,11 +452,12 @@ def run_stock_screener():
         rel_vol = float(v.iloc[-1] / avg_vol_20) if avg_vol_20 > 0 else 1.0
 
         bar_range_pct = ((h - l) / c).replace([np.inf, -np.inf], np.nan)
-        range_5d = float(bar_range_pct.tail(5).mean())
-        range_20d = float(bar_range_pct.tail(20).mean())
-        vcp_ratio = (range_5d / range_20d) if range_20d > 0 else 1.0
+        range_5d = bar_range_pct.tail(5).mean()
+        range_20d = bar_range_pct.tail(20).mean()
+        vcp_ratio = float(range_5d / range_20d) if pd.notna(range_5d) and pd.notna(range_20d) and range_20d > 0 else 1.0
 
-        chg_1d_pct = float(daily_ret[t].iloc[-1] * 100.0) if pd.notna(daily_ret[t].iloc[-1]) else 0.0
+        raw_chg = daily_ret[t].iloc[-1] if t in daily_ret.columns else np.nan
+        chg_1d_pct = float(raw_chg * 100.0) if pd.notna(raw_chg) and np.isfinite(raw_chg) else 0.0
 
         # 買點型態分類與買點綜合評分（結合 RS + 緊湊度 + 貼近 52W 高點 + 量能確認）
         in_buy_zone = (BUY_ZONE_MIN_EXT <= ext_ema21_pct <= BUY_ZONE_MAX_EXT)
@@ -418,21 +476,20 @@ def run_stock_screener():
                 setup_tag = "✅健康趨勢區"
                 setup_bonus = 3.0
 
-            # 越貼近 EMA21 (+1% ~ +3%) 及越接近 52W 新高，買點品質分越高
             tightness_score = max(0.0, 10.0 - abs(ext_ema21_pct - 2.0) * 1.2)
             near_high_score = max(0.0, 10.0 - dist_high_pct * 0.5)
             composite_score = (rs_rating * 0.65) + tightness_score + near_high_score + setup_bonus
         else:
             bucket = 'watch'
             setup_tag = "⚠️乖離偏高(等回踩)" if ext_ema21_pct > BUY_ZONE_MAX_EXT else "⏳短線回調觀察"
-            composite_score = float(rs_rating) + (raw_rs * 0.5)
+            composite_score = float(rs_rating) + (float(raw_rs) * 0.5)
 
         passed_trend.append({
             'ticker': t,
             'price': price,
             'chg_1d': chg_1d_pct,
             'rs_rating': rs_rating,
-            'raw_rs': raw_rs,
+            'raw_rs': float(raw_rs),
             'ext_ema21': ext_ema21_pct,
             'dist_high': dist_high_pct,
             'rel_vol': rel_vol,
@@ -500,12 +557,11 @@ def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
         rank = idx + 1
         t = row['ticker']
 
-        # 判斷新上榜／連霸天數
         past_recs = [r for r in prev_history.get(t, {}).get('records', []) if r.get('date') != trade_date]
-        if not past_recs:
+        if not past_recs or past_recs[-1].get('rank') is None:
             badge_hist = "🆕"
         else:
-            prev_r = past_recs[-1].get('rank')
+            prev_r = int(past_recs[-1]['rank'])
             diff = prev_r - rank
             if diff > 0:
                 badge_hist = f"▲{diff}"
