@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 # ==========================================
-# 1. 核心選股與風控參數（可按交易風格微調）
+# 1. 核心選股、板塊聯動與風控參數（可按交易風格微調）
 # ==========================================
 BENCHMARK = 'SPY'
 EQUAL_WEIGHT_BENCHMARK = 'RSP'
@@ -19,7 +19,7 @@ HISTORY_FILE = 'stock_history.json'
 
 # 篩選門檻
 MIN_PRICE = 10.0                  # 最低股價（過濾仙股）
-MIN_AVG_DOLLAR_VOL = 50_000_000   # 20 日均成交額至少 5,000 萬美元（確保流動性）
+MIN_AVG_DOLLAR_VOL = 30_000_000   # 20 日均成交額至少 3,000 萬美元（兼顧中型熱門主題股 VCP 縮量期）
 MIN_RS_RATING = 80                # 只推薦全市場 RS 80 分以上強勢股
 MAX_DIST_52W_HIGH_PCT = 20.0      # 距離 52 週高點唔超過 20%
 MIN_ABOVE_52W_LOW_PCT = 25.0      # 較 52 週低點已反彈至少 25%
@@ -37,26 +37,236 @@ EARNINGS_WARN_DAYS = 7            # 財報倒數 7 天內亮紅燈避雷
 TOP_BUY_COUNT = 10                # 優先推薦買入前 10 檔
 TOP_WATCH_COUNT = 10              # 強勢但乖離偏高觀察前 10 檔
 
-# 備用高流動性龍頭池（僅當 Wikipedia 暫時無法連線時自動啟用）
-FALLBACK_TICKERS = [
-    'AAPL', 'MSFT', 'NVDA', 'AMZN', 'META', 'GOOGL', 'AVGO', 'TSLA', 'LLY', 'JPM',
-    'V', 'MA', 'UNH', 'XOM', 'COST', 'HD', 'PG', 'NFLX', 'AMD', 'CRM',
-    'ORCL', 'ADBE', 'CSCO', 'ACN', 'LIN', 'TMO', 'ABT', 'MRK', 'PEP', 'KO',
-    'WMT', 'BAC', 'WFC', 'GS', 'MS', 'BLK', 'AXP', 'SPGI', 'CAT', 'GE',
-    'RTX', 'LMT', 'HON', 'UNP', 'ETN', 'UBER', 'ISRG', 'SYK', 'VRTX', 'REGN',
-    'AMAT', 'LRCX', 'KLAC', 'MU', 'ANET', 'PANW', 'CRWD', 'PLTR', 'APP', 'NOW',
-    'INTU', 'SNPS', 'CDNS', 'MELI', 'CEG', 'VST', 'GEV', 'AXON', 'FICO', 'SPOT',
-    'TSM', 'ASML', 'ARM', 'MRVL', 'APH', 'PWR', 'URI', 'PH', 'TT', 'FIX'
-]
+# 11 大一級板塊 ETF 與中文名稱對照（Top-Down 聯動基準）
+SECTOR_ETFS = {
+    'XLK': '科技',
+    'XLF': '金融',
+    'XLV': '醫療保健',
+    'XLY': '非必需消費',
+    'XLP': '必需消費',
+    'XLE': '能源',
+    'XLI': '工業',
+    'XLU': '公用事業',
+    'XLB': '原材料',
+    'XLRE': '房地產',
+    'XLC': '通訊服務'
+}
+
+# 板塊 RRG 象限對個股買點評分嘅 Top-Down 聯動加減分
+SECTOR_QUAD_BONUS = {
+    'Leading': 6.0,
+    'Improving': 3.0,
+    'Weakening': 0.0,
+    'Lagging': -3.0
+}
+
+QUADRANT_META = {
+    'Leading': ('🟢', '領先'),
+    'Improving': ('🔵', '改善'),
+    'Weakening': ('🟡', '轉弱'),
+    'Lagging': ('🔴', '落後')
+}
+
+# ==========================================
+# 2. 自訂 10 大熱門主題補充股池：ticker -> (中文主題標籤, 對應板塊ETF)
+#    （可隨時自行增刪，會自動與 S&P 500 + Nasdaq 100 合併去重）
+# ==========================================
+CUSTOM_THEMATIC_STOCKS = {
+    # --- 熱門 AI 算力與晶片 ---
+    'NVDA': ('熱門AI', 'XLK'),
+    'AVGO': ('熱門AI', 'XLK'),
+    'TSM':  ('熱門AI', 'XLK'),
+    'ASML': ('熱門AI', 'XLK'),
+    'ARM':  ('熱門AI', 'XLK'),
+    'AMD':  ('熱門AI', 'XLK'),
+    'MU':   ('熱門AI', 'XLK'),
+    'MRVL': ('熱門AI', 'XLK'),
+    'SMCI': ('熱門AI', 'XLK'),
+    'PLTR': ('熱門AI', 'XLK'),
+    'APP':  ('熱門AI', 'XLK'),
+    'ALAB': ('熱門AI', 'XLK'),
+    'CRDO': ('熱門AI', 'XLK'),
+    'NBIS': ('熱門AI', 'XLK'),
+    'CRWV': ('熱門AI', 'XLK'),
+    'IONQ': ('量子AI', 'XLK'),
+
+    # --- AI 電力與核電基建 ---
+    'CEG':  ('AI核電', 'XLU'),
+    'VST':  ('AI電力', 'XLU'),
+    'TLN':  ('AI電力', 'XLU'),
+    'OKLO': ('AI核電', 'XLU'),
+    'SMR':  ('AI核電', 'XLU'),
+    'GEV':  ('AI電力', 'XLI'),
+
+    # --- 光通信與高速互連 ---
+    'COHR': ('光通信', 'XLK'),
+    'LITE': ('光通信', 'XLK'),
+    'AAOI': ('光通信', 'XLK'),
+    'FN':   ('光通信', 'XLK'),
+    'CIEN': ('光通信', 'XLK'),
+    'GLW':  ('光通信', 'XLK'),
+    'ANET': ('光通信', 'XLK'),
+    'CLS':  ('光通信', 'XLK'),
+
+    # --- 數據中心、液冷與電氣基建 ---
+    'VRT':  ('數據中心', 'XLI'),
+    'MOD':  ('數據中心', 'XLI'),
+    'EQIX': ('數據中心', 'XLRE'),
+    'DLR':  ('數據中心', 'XLRE'),
+    'IRM':  ('數據中心', 'XLRE'),
+    'APLD': ('數據中心', 'XLK'),
+    'ETN':  ('數據中心', 'XLI'),
+    'PWR':  ('數據中心', 'XLI'),
+    'FIX':  ('數據中心', 'XLI'),
+
+    # --- 軟件、雲端與網絡安全 ---
+    'SNOW': ('軟件雲端', 'XLK'),
+    'NET':  ('軟件雲端', 'XLK'),
+    'DDOG': ('軟件雲端', 'XLK'),
+    'MDB':  ('軟件雲端', 'XLK'),
+    'GTLB': ('軟件雲端', 'XLK'),
+    'IOT':  ('軟件雲端', 'XLK'),
+    'MNDY': ('軟件雲端', 'XLK'),
+    'CFLT': ('軟件雲端', 'XLK'),
+    'CRWD': ('軟件網安', 'XLK'),
+    'ZS':   ('軟件網安', 'XLK'),
+    'PANW': ('軟件網安', 'XLK'),
+    'S':    ('軟件網安', 'XLK'),
+    'OKTA': ('軟件網安', 'XLK'),
+    'NOW':  ('軟件雲端', 'XLK'),
+    'CRM':  ('軟件雲端', 'XLK'),
+    'ORCL': ('軟件雲端', 'XLK'),
+    'MSFT': ('軟件雲端', 'XLK'),
+    'SHOP': ('軟件電商', 'XLK'),
+    'RDDT': ('軟件社群', 'XLC'),
+    'SPOT': ('軟件串流', 'XLC'),
+    'DUOL': ('軟件AI',   'XLY'),
+
+    # --- 醫療設備、AI醫療與健康服務 ---
+    'ISRG': ('醫療設備', 'XLV'),
+    'BSX':  ('醫療設備', 'XLV'),
+    'SYK':  ('醫療設備', 'XLV'),
+    'DXCM': ('醫療設備', 'XLV'),
+    'PODD': ('醫療設備', 'XLV'),
+    'TMDX': ('醫療設備', 'XLV'),
+    'HIMS': ('數碼醫療', 'XLV'),
+    'TEM':  ('AI醫療',   'XLV'),
+    'UNH':  ('醫療保險', 'XLV'),
+    'ELV':  ('醫療保險', 'XLV'),
+    'MCK':  ('醫療分銷', 'XLV'),
+    'COR':  ('醫療分銷', 'XLV'),
+    'CAH':  ('醫療分銷', 'XLV'),
+    'IDXX': ('醫療診斷', 'XLV'),
+    'EW':   ('醫療設備', 'XLV'),
+    'MDT':  ('醫療設備', 'XLV'),
+
+    # --- 製藥與生技 ---
+    'LLY':  ('製藥減肥', 'XLV'),
+    'NVO':  ('製藥減肥', 'XLV'),
+    'VKTX': ('生技減肥', 'XLV'),
+    'VRTX': ('生技製藥', 'XLV'),
+    'REGN': ('生技製藥', 'XLV'),
+    'ABBV': ('大型製藥', 'XLV'),
+    'AMGN': ('大型製藥', 'XLV'),
+    'GILD': ('大型製藥', 'XLV'),
+    'BMY':  ('大型製藥', 'XLV'),
+    'MRK':  ('大型製藥', 'XLV'),
+    'PFE':  ('大型製藥', 'XLV'),
+    'ARGX': ('生技製藥', 'XLV'),
+    'ALNY': ('生技製藥', 'XLV'),
+    'INSM': ('生技製藥', 'XLV'),
+    'PCVX': ('生技製藥', 'XLV'),
+    'AZN':  ('大型製藥', 'XLV'),
+
+    # --- 加密礦股與數位資產 ---
+    'IREN': ('加密礦股', 'XLK'),
+    'CLSK': ('加密礦股', 'XLK'),
+    'MARA': ('加密礦股', 'XLK'),
+    'RIOT': ('加密礦股', 'XLK'),
+    'CORZ': ('加密礦股', 'XLK'),
+    'HUT':  ('加密礦股', 'XLK'),
+    'WULF': ('加密礦股', 'XLK'),
+    'CIFR': ('加密礦股', 'XLK'),
+    'BTDR': ('加密礦股', 'XLK'),
+    'MSTR': ('加密資產', 'XLK'),
+    'COIN': ('加密交易', 'XLF'),
+    'HOOD': ('加密券商', 'XLF'),
+
+    # --- 太空、衛星與無人機國防 ---
+    'RKLB': ('太空火箭', 'XLI'),
+    'ASTS': ('太空衛星', 'XLC'),
+    'LUNR': ('太空探索', 'XLI'),
+    'PL':   ('太空衛星', 'XLI'),
+    'RDW':  ('太空基建', 'XLI'),
+    'KTOS': ('無人機國防', 'XLI'),
+    'AVAV': ('無人機國防', 'XLI'),
+    'LHX':  ('航天國防', 'XLI'),
+    'NOC':  ('航天國防', 'XLI'),
+    'LMT':  ('航天國防', 'XLI'),
+    'RTX':  ('航天國防', 'XLI'),
+    'HEI':  ('航天零件', 'XLI'),
+    'TDG':  ('航天零件', 'XLI'),
+
+    # --- 防守必消、公用與穩健現金牛 ---
+    'COST':  ('防守零售', 'XLP'),
+    'WMT':   ('防守零售', 'XLP'),
+    'PG':    ('防守必消', 'XLP'),
+    'KO':    ('防守必消', 'XLP'),
+    'PEP':   ('防守必消', 'XLP'),
+    'PM':    ('防守高息', 'XLP'),
+    'MO':    ('防守高息', 'XLP'),
+    'CL':    ('防守必消', 'XLP'),
+    'KR':    ('防守零售', 'XLP'),
+    'NEE':   ('防守公用', 'XLU'),
+    'SO':    ('防守公用', 'XLU'),
+    'DUK':   ('防守公用', 'XLU'),
+    'AEP':   ('防守公用', 'XLU'),
+    'WM':    ('防守環保', 'XLI'),
+    'RSG':   ('防守環保', 'XLI'),
+    'BRK-B': ('防守金融', 'XLF'),
+    'PGR':   ('防守保險', 'XLF'),
+    'CB':    ('防守保險', 'XLF'),
+}
+
+
+def map_sector_text_to_etf(raw_text):
+    """將 Wikipedia 嘅 GICS / ICB 行業名稱統一對應至 11 檔板塊 ETF"""
+    s = str(raw_text).strip().lower()
+    if not s or s == 'nan':
+        return None
+    if 'technology' in s:
+        return 'XLK'
+    if 'financial' in s:
+        return 'XLF'
+    if 'health' in s:
+        return 'XLV'
+    if 'discretionary' in s or 'cyclical' in s:
+        return 'XLY'
+    if 'staples' in s or 'defensive' in s:
+        return 'XLP'
+    if 'energy' in s:
+        return 'XLE'
+    if 'industrial' in s:
+        return 'XLI'
+    if 'utilit' in s:
+        return 'XLU'
+    if 'material' in s:
+        return 'XLB'
+    if 'real estate' in s:
+        return 'XLRE'
+    if 'communication' in s or 'telecom' in s:
+        return 'XLC'
+    return None
 
 
 # ==========================================
-# 2. 動態獲取美股主流股票池 (S&P 500 + Nasdaq 100)
+# 3. 動態獲取美股股票池 (S&P 500 + Nasdaq 100 + 自訂熱門主題池)
 # ==========================================
 def fetch_us_stock_universe():
-    """從 Wikipedia 動態抓取 S&P 500 + Nasdaq 100 成分股，失敗時無縫退回備用池"""
+    """從 Wikipedia 抓取 S&P 500 + Nasdaq 100 及行業，並無縫合併自訂熱門主題股池"""
     headers = {"User-Agent": "Mozilla/5.0 (compatible; StockRSBot/1.0)"}
     tickers_set = set()
+    ticker_sector_map = {}
 
     sources = [
         ("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies", "Symbol"),
@@ -70,32 +280,55 @@ def fetch_us_stock_universe():
             tables = pd.read_html(io.StringIO(resp.text))
             for tbl in tables:
                 cols = [str(c) for c in tbl.columns]
-                match_col = next((c for c in cols if col_hint.lower() in c.lower() or "symbol" in c.lower()), None)
-                if match_col and len(tbl) >= 80:
-                    raw_syms = tbl[match_col].dropna().astype(str).tolist()
-                    for sym in raw_syms:
-                        clean = sym.strip().upper().replace('.', '-')
-                        if clean and len(clean) <= 6 and clean.replace('-', '').isalpha():
-                            tickers_set.add(clean)
-                    break
+                sym_col = next((c for c in cols if col_hint.lower() in c.lower() or "symbol" in c.lower()), None)
+                if not sym_col or len(tbl) < 80:
+                    continue
+
+                sec_col = next((c for c in cols if "gics sector" in c.lower()), None)
+                if not sec_col:
+                    sec_col = next(
+                        (c for c in cols if ("sector" in c.lower() or "icb" in c.lower() or "industry" in c.lower())
+                         and "sub" not in c.lower()),
+                        None
+                    )
+
+                for _, r in tbl.iterrows():
+                    raw_sym = r.get(sym_col)
+                    if pd.isna(raw_sym):
+                        continue
+                    clean = str(raw_sym).strip().upper().replace('.', '-')
+                    if not (clean and len(clean) <= 6 and clean.replace('-', '').isalpha()):
+                        continue
+
+                    tickers_set.add(clean)
+                    if sec_col and clean not in ticker_sector_map:
+                        etf_code = map_sector_text_to_etf(r.get(sec_col))
+                        if etf_code:
+                            ticker_sector_map[clean] = etf_code
+                break
         except Exception as e:
             print(f"⚠️ 抓取成分股來源失敗 ({url}): {e}")
 
-    if len(tickers_set) < 100:
-        print("⚠️ 動態股票池不足，改用內置備用高流動性龍頭池。")
-        tickers_set.update(FALLBACK_TICKERS)
+    # 合併自訂熱門主題股（優先採用自訂精準板塊映射，涵蓋非標普 500 龍頭）
+    for sym, (_, sec_etf) in CUSTOM_THEMATIC_STOCKS.items():
+        tickers_set.add(sym)
+        if sec_etf in SECTOR_ETFS:
+            ticker_sector_map[sym] = sec_etf
 
     # 移除雙重類別重複股（保留流動性較佳者）
     for dup in ('GOOG', 'FOXA', 'NWS'):
         tickers_set.discard(dup)
 
     universe = sorted(tickers_set)
-    print(f"✅ 成功載入美股監控池：共 {len(universe)} 檔個股")
-    return universe
+    print(
+        f"✅ 成功載入美股監控池：共 {len(universe)} 檔"
+        f"（含 {len(CUSTOM_THEMATIC_STOCKS)} 檔熱門主題股｜已匹配行業 {len(ticker_sector_map)} 檔）"
+    )
+    return universe, ticker_sector_map
 
 
 # ==========================================
-# 3. 歷史上榜紀錄處理（按美股交易日去重，追蹤新上榜與排名變化）
+# 4. 歷史上榜紀錄處理（按美股交易日去重，追蹤新上榜與排名變化）
 # ==========================================
 def load_previous_history():
     if os.path.exists(HISTORY_FILE):
@@ -133,7 +366,7 @@ def save_current_history(buy_df, watch_df, trade_date):
 
 
 # ==========================================
-# 4. 分批安全下載行情（防 SQLite 鎖死＋自動單線程補抓）
+# 5. 分批安全下載行情（防 SQLite 鎖死＋自動單線程補抓）
 # ==========================================
 def download_ohlcv_in_batches(ticker_list, batch_size=50):
     """分批下載 1 年日線數據，限制並發防 SQLite database is locked，並自動補抓失敗標的"""
@@ -162,7 +395,6 @@ def download_ohlcv_in_batches(ticker_list, batch_size=50):
             vol_parts.append(raw[['Volume']].rename(columns={'Volume': sym}))
 
     def _merge(parts):
-        # 先移除全空失敗欄位，合併後保留最新有效補抓結果
         cleaned = [p.dropna(axis=1, how='all') for p in parts if p is not None and not p.empty]
         if not cleaned:
             return pd.DataFrame()
@@ -174,7 +406,6 @@ def download_ohlcv_in_batches(ticker_list, batch_size=50):
         chunk = ticker_list[i:i + batch_size]
         print(f"正在下載第 {i + 1}–{min(i + batch_size, len(ticker_list))} 檔行情...")
         try:
-            # 限制最多 4 條並發線程，避開 yfinance 內部 SQLite 快取鎖死
             _fetch_chunk(chunk, threads_opt=4)
         except Exception as e:
             print(f"⚠️ 批次 {i // batch_size + 1} 下載異常：{e}")
@@ -190,12 +421,11 @@ def download_ohlcv_in_batches(ticker_list, batch_size=50):
     if close_df.empty:
         raise RuntimeError("❌ Yahoo Finance 全部批次下載失敗，無可用數據。")
 
-    # 偵測漏抓或全空標的（例如曾報 database is locked 嘅個股），用單線程安全補抓一次
     missing_syms = [
         t for t in ticker_list
         if t not in close_df.columns or close_df[t].dropna().empty
     ]
-    if missing_syms and len(missing_syms) <= 30:
+    if missing_syms and len(missing_syms) <= 40:
         print(f"🔄 正在單線程補抓 {len(missing_syms)} 檔下載失敗標的：{', '.join(missing_syms)}")
         time.sleep(1.0)
         try:
@@ -252,8 +482,56 @@ def get_earnings_warning(ticker):
     return "", False
 
 
-def build_macro_header(close_df, raw_vix, raw_vix3m, trade_date):
-    """精簡版頂部大市濾網（SPY / RSP / VIX / VIX3M）"""
+def calc_sector_rrg_states(close_df):
+    """用與板塊 Bot 一致嘅 EMA 100 軸標準化 RRG 判定 11 大板塊強弱象限"""
+    spy_s = close_df[BENCHMARK].dropna()
+    sector_states = {}
+
+    for etf, zh_name in SECTOR_ETFS.items():
+        if etf not in close_df.columns:
+            continue
+        aligned = pd.concat([close_df[etf].rename('a'), spy_s.rename('b')], axis=1, join='inner').dropna()
+        aligned = aligned[(aligned['a'] > 0) & (aligned['b'] > 0)]
+        if len(aligned) < 40:
+            continue
+
+        rel = aligned['a'] / aligned['b']
+        raw_ratio = 100.0 * (rel.ewm(span=10, adjust=False).mean() / rel.ewm(span=40, adjust=False).mean())
+        raw_mom = 100.0 * (raw_ratio.ewm(span=5, adjust=False).mean() / raw_ratio.ewm(span=15, adjust=False).mean())
+
+        ratio_std = raw_ratio.rolling(60, min_periods=20).std().fillna(1.0).clip(lower=0.30)
+        mom_std = raw_mom.rolling(60, min_periods=20).std().fillna(0.50).clip(lower=0.15)
+
+        ratio_z = float(((raw_ratio - 100.0) / ratio_std).iloc[-1])
+        mom_z = float(((raw_mom - 100.0) / mom_std).iloc[-1])
+        if not (np.isfinite(ratio_z) and np.isfinite(mom_z)):
+            continue
+
+        if ratio_z >= 0 and mom_z >= 0:
+            quad = 'Leading'
+        elif ratio_z < 0 and mom_z >= 0:
+            quad = 'Improving'
+        elif ratio_z >= 0 and mom_z < 0:
+            quad = 'Weakening'
+        else:
+            quad = 'Lagging'
+
+        emoji, quad_zh = QUADRANT_META[quad]
+        sector_states[etf] = {
+            'etf': etf,
+            'name': zh_name,
+            'quadrant': quad,
+            'emoji': emoji,
+            'quad_zh': quad_zh,
+            'ratio_z': ratio_z,
+            'bonus': SECTOR_QUAD_BONUS[quad]
+        }
+
+    return sector_states
+
+
+def build_macro_header(close_df, raw_vix, raw_vix3m, trade_date, sector_states):
+    """頂部大市濾網（SPY / RSP / VIX / VIX3M + 今日領先板塊速覽）"""
     spy_s = close_df[BENCHMARK].dropna()
     spy_sma200 = float(spy_s.rolling(200).mean().iloc[-1])
     spy_sma50 = float(spy_s.rolling(50).mean().iloc[-1])
@@ -295,21 +573,33 @@ def build_macro_header(close_df, raw_vix, raw_vix3m, trade_date):
 
         vix_line = f"\n{v_emoji} **VIX** `{v_now:.2f}` (`{v_chg:+.1f}%`){term_txt}"
 
+    leading_secs = sorted(
+        [v for v in sector_states.values() if v['quadrant'] == 'Leading'],
+        key=lambda x: x['ratio_z'],
+        reverse=True
+    )
+    if leading_secs:
+        lead_tags = " · ".join(f"`{s['name']}({s['etf']})`" for s in leading_secs[:5])
+        sector_line = f"\n🔥 **領先板塊**：{lead_tags}"
+    else:
+        sector_line = "\n🔥 **領先板塊**：暫無（資金高度防守）"
+
     header = (
         f"### 📡 美股環境濾網｜{trade_date}\n"
         f"{spy_emoji} **SPY** · {spy_state}"
         f"{rsp_line}"
         f"{vix_line}"
+        f"{sector_line}"
     )
     return header, is_bull
 
 
 # ==========================================
-# 5. Minervini 趨勢篩選、IBD 1–99 RS 與買點綜合評分
+# 6. Minervini 趨勢篩選、IBD 1–99 RS 與 Top-Down 買點綜合評分
 # ==========================================
 def run_stock_screener():
-    universe = fetch_us_stock_universe()
-    macro_tickers = [BENCHMARK, EQUAL_WEIGHT_BENCHMARK, VIX_TICKER, VIX3M_TICKER]
+    universe, ticker_sector_map = fetch_us_stock_universe()
+    macro_tickers = [BENCHMARK, EQUAL_WEIGHT_BENCHMARK, VIX_TICKER, VIX3M_TICKER] + list(SECTOR_ETFS.keys())
     all_symbols = sorted(set(universe + macro_tickers))
 
     close_raw, high_raw, low_raw, vol_raw = download_ohlcv_in_batches(all_symbols, batch_size=50)
@@ -331,7 +621,8 @@ def run_stock_screener():
         raise ValueError(f"❌ SPY 數據不足 210 個交易日（目前僅 {len(close_df)} 筆）。")
 
     trade_date = spy_dates[-1].strftime('%Y-%m-%d')
-    macro_header, is_bull = build_macro_header(close_df, raw_vix, raw_vix3m, trade_date)
+    sector_states = calc_sector_rrg_states(close_df)
+    macro_header, is_bull = build_macro_header(close_df, raw_vix, raw_vix3m, trade_date, sector_states)
 
     # 計算全體股票池多週期回報與 20 日波幅（IBD 風格中短期動能權重：1M 25% + 3M 35% + 6M 25% + 9M 15%）
     daily_ret = close_df.pct_change(1, fill_method=None)
@@ -382,7 +673,7 @@ def run_stock_screener():
         .to_dict()
     )
 
-    # Step B：逐檔執行 Minervini 趨勢模板、流動性、量價收斂與買點打分
+    # Step B：逐檔執行 Minervini 趨勢模板、流動性、量價收斂與 Top-Down 板塊聯動打分
     passed_trend = []
     for t, raw_rs in rs_series.items():
         rs_rating = rs_rating_map.get(t, 1)
@@ -443,11 +734,9 @@ def run_stock_screener():
         stop_price = max(price - ATR_MULTIPLIER * atr_14, 0.0)
         stop_pct = ((price - stop_price) / price * 100.0) if price > 0 else 8.0
 
-        # 1% 風險定倉：倉位 = 1.0% / 止損幅度(%)，空頭市自動減半
         base_pos = min((RISK_PER_TRADE_PCT / max(stop_pct, 1.5)) * 100.0, MAX_SINGLE_POS_PCT)
         pos_size = base_pos if is_bull else (base_pos * 0.5)
 
-        # 乖離率、量比、VCP 波幅收斂比（近 5 日平均振幅 ÷ 近 20 日平均振幅）
         ext_ema21_pct = ((price - ema21) / ema21 * 100.0) if ema21 > 0 else 0.0
         rel_vol = float(v.iloc[-1] / avg_vol_20) if avg_vol_20 > 0 else 1.0
 
@@ -459,7 +748,18 @@ def run_stock_screener():
         raw_chg = daily_ret[t].iloc[-1] if t in daily_ret.columns else np.nan
         chg_1d_pct = float(raw_chg * 100.0) if pd.notna(raw_chg) and np.isfinite(raw_chg) else 0.0
 
-        # 買點型態分類與買點綜合評分（結合 RS + 緊湊度 + 貼近 52W 高點 + 量能確認）
+        # 主題標籤與 Top-Down 板塊聯動加減分
+        theme_tag = CUSTOM_THEMATIC_STOCKS[t][0] if t in CUSTOM_THEMATIC_STOCKS else ""
+        sec_etf = ticker_sector_map.get(t)
+        sec_info = sector_states.get(sec_etf) if sec_etf else None
+        if sec_info:
+            sector_label = f"{sec_info['name']}({sec_info['etf']} {sec_info['emoji']}{sec_info['quad_zh']})"
+            sector_bonus = float(sec_info['bonus'])
+        else:
+            sector_label = "其他行業"
+            sector_bonus = 0.0
+
+        # 買點型態分類與買點綜合評分（結合 RS + 緊湊度 + 貼近 52W 高點 + 量能 + 板塊聯動）
         in_buy_zone = (BUY_ZONE_MIN_EXT <= ext_ema21_pct <= BUY_ZONE_MAX_EXT)
         if in_buy_zone:
             bucket = 'buy'
@@ -478,11 +778,11 @@ def run_stock_screener():
 
             tightness_score = max(0.0, 10.0 - abs(ext_ema21_pct - 2.0) * 1.2)
             near_high_score = max(0.0, 10.0 - dist_high_pct * 0.5)
-            composite_score = (rs_rating * 0.65) + tightness_score + near_high_score + setup_bonus
+            composite_score = (rs_rating * 0.65) + tightness_score + near_high_score + setup_bonus + sector_bonus
         else:
             bucket = 'watch'
             setup_tag = "⚠️乖離偏高(等回踩)" if ext_ema21_pct > BUY_ZONE_MAX_EXT else "⏳短線回調觀察"
-            composite_score = float(rs_rating) + (float(raw_rs) * 0.5)
+            composite_score = float(rs_rating) + (float(raw_rs) * 0.5) + (sector_bonus * 0.5)
 
         passed_trend.append({
             'ticker': t,
@@ -497,6 +797,9 @@ def run_stock_screener():
             'stop_price': stop_price,
             'stop_pct': stop_pct,
             'pos_size': pos_size,
+            'theme_tag': theme_tag,
+            'sector_label': sector_label,
+            'sector_bonus': sector_bonus,
             'setup_tag': setup_tag,
             'bucket': bucket,
             'composite_score': composite_score
@@ -517,7 +820,7 @@ def run_stock_screener():
 
         watch_df = (
             df_all[df_all['bucket'] == 'watch']
-            .sort_values(by=['rs_rating', 'raw_rs'], ascending=False)
+            .sort_values(by=['composite_score', 'rs_rating'], ascending=False)
             .head(TOP_WATCH_COUNT)
             .reset_index(drop=True)
         )
@@ -546,7 +849,7 @@ def run_stock_screener():
 
 
 # ==========================================
-# 6. 手機三層清晰排版與 Discord 雙 Embed 推送
+# 7. 手機四層精簡卡片排版與 Discord 雙 Embed 推送
 # ==========================================
 def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
     if df.empty:
@@ -572,18 +875,24 @@ def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
 
         lead_emoji = "🚨" if row.get('earnings_warn') else ("🟢" if is_buy_list else "🟡")
         earn_str = f" · {row['earnings_note']}" if row.get('earnings_note') else ""
-        vol_str = f"量比 {row['rel_vol']:.1f}x"
+
+        bonus_val = float(row.get('sector_bonus', 0.0))
+        bonus_txt = f" {bonus_val:+.0f}分" if bonus_val != 0 else ""
+        sec_str = f"{row.get('sector_label', '其他行業')}{bonus_txt}"
+        theme_tag = row.get('theme_tag', '')
+        tag_prefix = f"🏷️{theme_tag}｜" if theme_tag else "板塊："
 
         line_1 = f"{lead_emoji} **#{rank:02d} {t}** `${row['price']:.2f}` ({row['chg_1d']:+.1f}%) `RS {int(row['rs_rating']):02d}` {badge_hist}"
-        line_2 = (
-            f"-#  {row['setup_tag']} · 距EMA21 {row['ext_ema21']:+.1f}% · "
-            f"距年高 -{row['dist_high']:.1f}% · {vol_str}"
-        )
+        line_2 = f"-#  {tag_prefix}{sec_str}"
         line_3 = (
-            f"-#  止損 ${row['stop_price']:.2f} (-{row['stop_pct']:.1f}%) · "
-            f"1%風險建議倉 {row['pos_size']:.1f}%{earn_str}"
+            f"-#  {row['setup_tag']} · EMA21 {row['ext_ema21']:+.1f}% · "
+            f"年高 -{row['dist_high']:.1f}% · 量{row['rel_vol']:.1f}x"
         )
-        cards.append(f"{line_1}\n{line_2}\n{line_3}")
+        line_4 = (
+            f"-#  止損 ${row['stop_price']:.2f} (-{row['stop_pct']:.1f}%) · "
+            f"1%風險倉 {row['pos_size']:.1f}%{earn_str}"
+        )
+        cards.append(f"{line_1}\n{line_2}\n{line_3}\n{line_4}")
 
     return "\n".join(cards)
 
@@ -627,7 +936,7 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
                 "description": (
                     f"{macro_header}\n\n"
                     f"{funnel_block}\n\n"
-                    f"### 🟢 優先買點排名（貼近 EMA21 / VCP 縮量 / 放量突破）\n"
+                    f"### 🟢 優先買點排名（板塊共振 / VCP 縮量 / 放量突破）\n"
                     f"{buy_cards}"
                 ),
                 "color": 3066993
@@ -643,7 +952,7 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
                 ),
                 "color": 15844367,
                 "footer": {
-                    "text": f"美股數據日：{trade_date} • Minervini模板+IBD RS • 1%風險定倉({ATR_MULTIPLIER:g}xATR) • 🚨財報7日內勿重倉"
+                    "text": f"美股數據日：{trade_date} • Top-Down板塊聯動+Minervini • 1%風險定倉({ATR_MULTIPLIER:g}xATR) • 🚨財報7日內勿重倉"
                 },
                 "timestamp": now_iso
             }
@@ -657,7 +966,7 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
 
 
 # ==========================================
-# 7. 主程式入口
+# 8. 主程式入口
 # ==========================================
 if __name__ == "__main__":
     prev_history = load_previous_history()
