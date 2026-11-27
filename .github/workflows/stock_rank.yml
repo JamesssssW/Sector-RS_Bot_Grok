@@ -2,10 +2,13 @@ name: Daily Strong US Stock Screener
 
 on:
   schedule:
-    # 1. 美股收市定稿（冬夏令聯集：20:45 UTC 夏令 / 21:45 UTC 冬令，由下方紐約時區閘門自動過濾）
-    - cron: '45 20,21 * * 1-5'
+    # 1. 美股夏令收市定稿（20:45 UTC = 16:45 EDT = 04:45 HKT，由下方 dst 閘門精準放行）
+    - cron: '45 20 * * 1-5'
 
-    # 2. 港澳傍晚 18:00 覆盤（對應美股週一至五收市，全年免改）
+    # 2. 美股冬令收市定稿（21:45 UTC = 16:45 EST = 05:45 HKT，由下方 dst 閘門精準放行）
+    - cron: '45 21 * * 1-5'
+
+    # 3. 港澳傍晚 18:00 覆盤（對應美股週一至五收市，全年免改；如嫌整點排隊耐可改 '5 10 * * 2-6'）
     - cron: '0 10 * * 2-6'
 
   workflow_dispatch:
@@ -36,19 +39,20 @@ jobs:
           event_name = os.environ.get("EVENT_NAME", "")
           schedule = os.environ.get("EVENT_SCHEDULE", "")
           ny_now = datetime.now(ZoneInfo("America/New_York"))
+          is_dst = bool(ny_now.dst())
 
           should_run = False
           if event_name != "schedule":
               should_run = True
           elif schedule == "0 10 * * 2-6":
               should_run = True
-          else:
-              # 只放行紐約時間 16:35 至 17:34（即美股收市後定稿視窗），自動略過另一時令嘅多餘觸發
-              ny_min = ny_now.hour * 60 + ny_now.minute
-              if ny_now.weekday() < 5 and (16 * 60 + 35) <= ny_min < (17 * 60 + 35):
-                  should_run = True
+          elif schedule == "45 20 * * 1-5" and is_dst:
+              should_run = True
+          elif schedule == "45 21 * * 1-5" and not is_dst:
+              should_run = True
 
-          print(f"NY Time: {ny_now.strftime('%Y-%m-%d %H:%M %Z')} | should_run={should_run}")
+          mode = "夏令 EDT" if is_dst else "冬令 EST"
+          print(f"NY Time: {ny_now.strftime('%Y-%m-%d %H:%M %Z')} ({mode}) | Cron: {schedule} | should_run={should_run}")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
               f.write(f"should_run={'true' if should_run else 'false'}\n")
           EOF
@@ -85,8 +89,18 @@ jobs:
             git add stock_history.json
             if ! git diff --cached --quiet; then
               git commit -m "chore: update stock ranking history [skip ci]"
-              git pull --rebase origin "${GITHUB_REF_NAME}"
-              git push origin "HEAD:${GITHUB_REF_NAME}"
+              for i in 1 2 3; do
+                if ! git pull --rebase origin "${GITHUB_REF_NAME}"; then
+                  git checkout --theirs stock_history.json 2>/dev/null || true
+                  git add stock_history.json
+                  GIT_EDITOR=true git rebase --continue || { git rebase --abort; sleep 3; continue; }
+                fi
+                if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+                  exit 0
+                fi
+                sleep 3
+              done
+              exit 1
             fi
           fi
 
