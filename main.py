@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 # ==========================================
-# 1. 核心選股、買點型態、板塊聯動與風控參數
+# 1. 核心選股、買點型態、止跌濾網、板塊聯動與風控參數
 # ==========================================
 BENCHMARK = 'SPY'
 EQUAL_WEIGHT_BENCHMARK = 'RSP'
@@ -24,10 +24,12 @@ MIN_RS_RATING = 80                # 只推薦全市場 RS 80 分以上強勢股
 MAX_DIST_52W_HIGH_PCT = 20.0      # 距離 52 週高點唔超過 20%
 MIN_ABOVE_52W_LOW_PCT = 25.0      # 較 52 週低點已反彈至少 25%
 
-# 防追高買點區間與 VCP / EMA21 嚴格參數
-BUY_ZONE_MIN_EXT = -3.0           # 允許輕微回踩 EMA21 下方 3%
+# 防追高買點區間、VCP 縮量與 EMA21 止跌濾網參數
+BUY_ZONE_MIN_EXT = -1.0           # 收緊至只容許輕微跌穿 EMA21 1% 以內
 BUY_ZONE_MAX_EXT = 8.0            # 距離 EMA21 8% 以內屬於安全可買區；超過 8% 撥入「乖離偏高觀察」
-EMA21_PULLBACK_MAX_EXT = 2.5      # 回踩 EMA21 判定上限（-3.0% 至 +2.5%）
+EMA21_PULLBACK_MAX_EXT = 2.5      # 回踩 EMA21 判定上限（-1.0% 至 +2.5%）
+PULLBACK_MAX_DOWN_VOL = 1.0       # 下跌日量比上限（≤ 1.0x 代表縮量回調，唔放量下跌）
+PULLBACK_MIN_CLOSE_POS = 0.55     # 下影線支撐門檻（收市價位於全日波幅 55% 以上）
 VCP_RANGE_RATIO_MAX = 0.78        # 價窄：近 5 日平均振幅 ÷ 近 20 日平均振幅 上限
 VCP_VOL_RATIO_MAX = 0.85          # 真縮量：近 5 日均量 ÷ 近 20 日均量 上限
 VCP_MAX_DIST_HIGH_PCT = 10.0      # 高位蓄勢：距離 52 週高點 10% 以內
@@ -312,7 +314,6 @@ def fetch_us_stock_universe():
         except Exception as e:
             print(f"⚠️ 抓取成分股來源失敗 ({url}): {e}")
 
-    # 合併自訂熱門主題股（優先採用自訂精準板塊映射）
     for sym, (_, sec_etf) in CUSTOM_THEMATIC_STOCKS.items():
         tickers_set.add(sym)
         if sec_etf in SECTOR_ETFS:
@@ -597,7 +598,7 @@ def build_macro_header(close_df, raw_vix, raw_vix3m, trade_date, sector_states):
 
 
 # ==========================================
-# 6. Minervini 趨勢篩選、真縮量 VCP + EMA21 共振與 Top-Down 買點評分
+# 6. Minervini 趨勢篩選、止跌濾網、真縮量 VCP 與 Top-Down 買點評分
 # ==========================================
 def run_stock_screener():
     universe, ticker_sector_map = fetch_us_stock_universe()
@@ -612,7 +613,6 @@ def run_stock_screener():
     raw_vix = close_raw[VIX_TICKER].dropna() if VIX_TICKER in close_raw.columns else pd.Series(dtype=float)
     raw_vix3m = close_raw[VIX3M_TICKER].dropna() if VIX3M_TICKER in close_raw.columns else pd.Series(dtype=float)
 
-    # 鎖定對齊 SPY 交易日
     spy_dates = close_raw[BENCHMARK].dropna().index
     close_df = close_raw.reindex(spy_dates).ffill(limit=2)
     high_df = high_raw.reindex(spy_dates).ffill(limit=2)
@@ -675,7 +675,7 @@ def run_stock_screener():
         .to_dict()
     )
 
-    # Step B：逐檔執行 Minervini 趨勢模板、真縮量 VCP 驗證與 Top-Down 板塊聯動打分
+    # Step B：逐檔執行 Minervini 趨勢模板、止跌濾網、真縮量 VCP 與 Top-Down 板塊聯動打分
     passed_trend = []
     for t, raw_rs in rs_series.items():
         rs_rating = rs_rating_map.get(t, 1)
@@ -753,6 +753,16 @@ def run_stock_screener():
         raw_chg = daily_ret[t].iloc[-1] if t in daily_ret.columns else np.nan
         chg_1d_pct = float(raw_chg * 100.0) if pd.notna(raw_chg) and np.isfinite(raw_chg) else 0.0
 
+        # 當日收盤位置比率（衡量下影線支撐）與止跌濾網
+        day_high = float(h.iloc[-1])
+        day_low = float(l.iloc[-1])
+        day_range = day_high - day_low
+        close_pos = ((price - day_low) / day_range) if day_range > 0 else 0.5
+
+        no_heavy_sell = (chg_1d_pct >= 0.0) or (rel_vol <= PULLBACK_MAX_DOWN_VOL)
+        has_lower_wick_support = (day_range > 0) and (close_pos >= PULLBACK_MIN_CLOSE_POS)
+        is_stabilized = no_heavy_sell or has_lower_wick_support
+
         # 主題標籤與 Top-Down 板塊聯動加減分
         theme_tag = CUSTOM_THEMATIC_STOCKS[t][0] if t in CUSTOM_THEMATIC_STOCKS else ""
         sec_etf = ticker_sector_map.get(t)
@@ -764,7 +774,7 @@ def run_stock_screener():
             sector_label = "其他行業"
             sector_bonus = 0.0
 
-        # 買點型態精確判定（真縮量 VCP + EMA21 雙重共振優先）
+        # 買點型態精確判定（真縮量 VCP + EMA21 止跌共振優先，放量陰跌收低自動避開）
         in_buy_zone = (BUY_ZONE_MIN_EXT <= ext_ema21_pct <= BUY_ZONE_MAX_EXT)
         is_breakout = (dist_high_pct <= 4.0 and rel_vol >= 1.25 and chg_1d_pct > 0)
         is_vcp = (
@@ -772,9 +782,10 @@ def run_stock_screener():
             and vol_dry_ratio <= VCP_VOL_RATIO_MAX
             and dist_high_pct <= VCP_MAX_DIST_HIGH_PCT
         )
-        is_ema21_pullback = (BUY_ZONE_MIN_EXT <= ext_ema21_pct <= EMA21_PULLBACK_MAX_EXT)
+        in_ema21_band = (BUY_ZONE_MIN_EXT <= ext_ema21_pct <= EMA21_PULLBACK_MAX_EXT)
+        is_ema21_pullback = in_ema21_band and is_stabilized
 
-        if in_buy_zone:
+        if in_buy_zone and not (in_ema21_band and not is_stabilized):
             bucket = 'buy'
             if is_vcp and is_ema21_pullback:
                 setup_tag = "💎VCP+EMA21共振"
@@ -786,7 +797,10 @@ def run_stock_screener():
                 setup_tag = "🎯VCP縮量緊湊"
                 setup_bonus = 7.0
             elif is_ema21_pullback:
-                setup_tag = "🛡️回踩EMA21"
+                if has_lower_wick_support and chg_1d_pct < 0:
+                    setup_tag = "🛡️回踩EMA21(下影線)"
+                else:
+                    setup_tag = "🛡️回踩EMA21"
                 setup_bonus = 6.0
             else:
                 setup_tag = "✅健康趨勢區"
@@ -797,7 +811,12 @@ def run_stock_screener():
             composite_score = (rs_rating * 0.65) + tightness_score + near_high_score + setup_bonus + sector_bonus
         else:
             bucket = 'watch'
-            setup_tag = "⚠️乖離偏高(等回踩)" if ext_ema21_pct > BUY_ZONE_MAX_EXT else "⏳短線回調觀察"
+            if in_ema21_band and not is_stabilized:
+                setup_tag = "⚠️放量下跌(勿接刀)"
+            elif ext_ema21_pct > BUY_ZONE_MAX_EXT:
+                setup_tag = "⚠️乖離偏高(等回踩)"
+            else:
+                setup_tag = "⏳破EMA21觀察"
             composite_score = float(rs_rating) + (float(raw_rs) * 0.5) + (sector_bonus * 0.5)
 
         passed_trend.append({
@@ -811,7 +830,7 @@ def run_stock_screener():
             'rel_vol': rel_vol,
             'vol_dry_ratio': vol_dry_ratio,
             'vcp_ratio': vcp_ratio,
-            'is_vcp_setup': bool(in_buy_zone and is_vcp),
+            'is_vcp_setup': bool(in_buy_zone and is_vcp and not (in_ema21_band and not is_stabilized)),
             'stop_price': stop_price,
             'stop_pct': stop_pct,
             'pos_size': pos_size,
@@ -945,7 +964,7 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
     funnel_block = (
         f"### 🔍 強勢個股漏斗統計\n"
         f"掃描 `{funnel_stats['universe_cnt']}` 檔 ➔ 多頭模板 `{funnel_stats['trend_cnt']}` 檔 ➔ "
-        f"🎯買點區 `{funnel_stats['buy_cnt']}` 檔｜⚠️偏高 `{funnel_stats['watch_cnt']}` 檔"
+        f"🎯買點區 `{funnel_stats['buy_cnt']}` 檔｜⚠️偏高／觀察 `{funnel_stats['watch_cnt']}` 檔"
     )
     if not is_bull:
         funnel_block += "\n-# ⚠️ SPY 跌破 200MA 空頭警戒：下方單股建議倉位已自動減半"
@@ -962,23 +981,23 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
                 "description": (
                     f"{macro_header}\n\n"
                     f"{funnel_block}\n\n"
-                    f"### 🟢 優先買點排名（VCP+EMA21共振 / 真縮量VCP / 放量突破）\n"
+                    f"### 🟢 優先買點排名（VCP+EMA21共振 / 真縮量VCP / 止跌回踩）\n"
                     f"{buy_cards}"
                 ),
                 "color": 3066993
             }
         ),
         (
-            "Embed 2/2 乖離偏高觀察名單",
+            "Embed 2/2 觀察與防追高名單",
             {
-                "title": f"⚠️ [2/2] 強勢龍頭觀察名單 Top {len(watch_df)}（乖離偏高，等回踩）",
+                "title": f"⚠️ [2/2] 強勢龍頭觀察名單 Top {len(watch_df)}（乖離偏高 / 止跌觀察）",
                 "description": (
-                    f"-# 以下個股 RS 評分極高但已偏離 EMA21 超過 {BUY_ZONE_MAX_EXT:g}%，建議加入自選等縮量回踩先買\n\n"
+                    f"-# 以下個股 RS 評分極高但已偏離 EMA21 超過 {BUY_ZONE_MAX_EXT:g}% 或處於放量下跌／破線觀察，建議等企穩先買\n\n"
                     f"{watch_cards}"
                 ),
                 "color": 15844367,
                 "footer": {
-                    "text": f"美股數據日：{trade_date} • Top-Down板塊聯動+真縮量VCP • 1%風險定倉({ATR_MULTIPLIER:g}xATR) • 🚨財報7日內勿重倉"
+                    "text": f"美股數據日：{trade_date} • EMA21(-1%~+2.5%)止跌濾網+真縮量VCP • 1%風險定倉({ATR_MULTIPLIER:g}xATR)"
                 },
                 "timestamp": now_iso
             }
