@@ -1,0 +1,112 @@
+{
+  "PTC": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 1,
+        "bucket": "buy",
+        "rs": 99
+      }
+    ]
+  },
+  "TECH": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 2,
+        "bucket": "buy",
+        "rs": 99
+      }
+    ]
+  },
+  "TRV": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 3,
+        "bucket": "buy",
+        "rs": 97
+      }
+    ]
+  },
+  "LH": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 4,
+        "bucket": "buy",
+        "rs": 96
+      }
+    ]
+  },
+  "DGX": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 5,
+        "bucket": "buy",
+        "rs": 96
+      }
+    ]
+  },
+  "VLTO": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 6,
+        "bucket": "buy",
+        "rs": 96
+      }
+    ]
+  },
+  "KO": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 7,
+        "bucket": "buy",
+        "rs": 96
+      }
+    ]
+  },
+  "BRK-B": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 8,
+        "bucket": "buy",
+        "rs": 93
+      }
+    ]
+  },
+  "EVRG": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 9,
+        "bucket": "buy",
+        "rs": 94
+      }
+    ]
+  },
+  "WRB": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 10,
+        "bucket": "buy",
+        "rs": 98
+      }
+    ]
+  },
+  "HAS": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 1,
+        "bucket": "watch",
+        "rs": 85
+      }
+    ]
+  }
+}
