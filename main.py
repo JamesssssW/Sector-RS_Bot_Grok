@@ -886,8 +886,14 @@ def run_stock_screener():
 
 
 # ==========================================
-# 7. 手機四層精簡卡片排版與 Discord 雙 Embed 推送
+# 7. 手機四層精簡卡片排版（含 TradingView 超連結）與 Discord 雙 Embed 推送
 # ==========================================
+def format_tv_link(ticker):
+    """將美股代號轉成 TradingView 直開 K 線圖超連結（自動修正 BRK-B 類符號）"""
+    tv_symbol = ticker.replace('-', '.')
+    return f"[**{ticker}**](https://www.tradingview.com/chart/?symbol={tv_symbol})"
+
+
 def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
     if df.empty:
         return "-# 今日暫無符合嚴格趨勢與買點條件嘅個股，建議保留現金耐心等待。"
@@ -919,7 +925,10 @@ def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
         theme_tag = row.get('theme_tag', '')
         tag_prefix = f"🏷️{theme_tag}｜" if theme_tag else "板塊："
 
-        line_1 = f"{lead_emoji} **#{rank:02d} {t}** `${row['price']:.2f}` ({row['chg_1d']:+.1f}%) `RS {int(row['rs_rating']):02d}` {badge_hist}"
+        line_1 = (
+            f"{lead_emoji} **#{rank:02d}** {format_tv_link(t)} "
+            f"`${row['price']:.2f}` ({row['chg_1d']:+.1f}%) `RS {int(row['rs_rating']):02d}` {badge_hist}"
+        )
         line_2 = f"-#  {tag_prefix}{sec_str}"
 
         if row.get('is_vcp_setup'):
