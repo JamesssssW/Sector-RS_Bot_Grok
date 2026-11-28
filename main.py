@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 
 # ==========================================
-# 1. 核心選股、買點型態、止跌濾網、板塊聯動與風控參數
+# 1. 核心選股、買點型態、止跌濾網、真龍頭與風控參數
 # ==========================================
 BENCHMARK = 'SPY'
 EQUAL_WEIGHT_BENCHMARK = 'RSP'
@@ -33,6 +33,14 @@ PULLBACK_MIN_CLOSE_POS = 0.55     # 下影線支撐門檻（收市價位於全�
 VCP_RANGE_RATIO_MAX = 0.78        # 價窄：近 5 日平均振幅 ÷ 近 20 日平均振幅 上限
 VCP_VOL_RATIO_MAX = 0.85          # 真縮量：近 5 日均量 ÷ 近 20 日均量 上限
 VCP_MAX_DIST_HIGH_PCT = 10.0      # 高位蓄勢：距離 52 週高點 10% 以內
+
+# 真龍頭強化參數（RS Line 52 週新高 + 個股跑贏所屬板塊 ETF）
+RS_LINE_HIGH_TOLERANCE = 0.995    # RS Line 處於 52 週高點 99.5% 以上即視為創年高
+RS_BLUE_DOT_MIN_DIST = 2.0        # 股價仍距年高 ≥ 2% 但 RS 線已創高（先行創高藍點）
+RS_BLUE_DOT_BONUS = 5.0           # 🔵RS先行創高 加分
+RS_NEW_HIGH_BONUS = 3.0           # ⚡RS創年高 加分
+SECTOR_LEADER_BONUS = 3.0         # 👑近 1M & 3M 雙雙跑贏所屬板塊 ETF 加分
+SECTOR_LAGGARD_PENALTY = -2.0     # 🐢近 1M & 3M 雙雙跑輸所屬板塊 ETF 扣分
 
 # 單筆風險倉位與止損參數
 RISK_PER_TRADE_PCT = 1.0          # 每筆交易最大承受總資金虧損 1.0% (1R)
@@ -598,7 +606,7 @@ def build_macro_header(close_df, raw_vix, raw_vix3m, trade_date, sector_states):
 
 
 # ==========================================
-# 6. Minervini 趨勢篩選、止跌濾網、真縮量 VCP 與 Top-Down 買點評分
+# 6. Minervini 趨勢篩選、止跌濾網、真縮量 VCP、RS Line 創高與板塊領跑評分
 # ==========================================
 def run_stock_screener():
     universe, ticker_sector_map = fetch_us_stock_universe()
@@ -675,7 +683,7 @@ def run_stock_screener():
         .to_dict()
     )
 
-    # Step B：逐檔執行 Minervini 趨勢模板、止跌濾網、真縮量 VCP 與 Top-Down 板塊聯動打分
+    # Step B：逐檔執行 Minervini 趨勢模板、止跌濾網、真縮量 VCP、RS Line 創高與板塊領跑打分
     passed_trend = []
     for t, raw_rs in rs_series.items():
         rs_rating = rs_rating_map.get(t, 1)
@@ -774,6 +782,46 @@ def run_stock_screener():
             sector_label = "其他行業"
             sector_bonus = 0.0
 
+        # 真龍頭指標 1：RS Line 創 52 週新高偵測（個股收市價 ÷ SPY 收市價）
+        rs_line_tag = ""
+        rs_line_bonus = 0.0
+        spy_aligned = close_df[BENCHMARK].reindex(c.index).ffill()
+        rs_line = (c / spy_aligned).replace([np.inf, -np.inf], np.nan).dropna()
+        if len(rs_line) >= 120:
+            rs_window = rs_line.tail(252)
+            rs_now = float(rs_window.iloc[-1])
+            rs_52w_high = float(rs_window.max())
+            if np.isfinite(rs_now) and np.isfinite(rs_52w_high) and rs_52w_high > 0:
+                if rs_now >= rs_52w_high * RS_LINE_HIGH_TOLERANCE:
+                    if dist_high_pct >= RS_BLUE_DOT_MIN_DIST:
+                        rs_line_tag = "🔵RS先行創高"
+                        rs_line_bonus = RS_BLUE_DOT_BONUS
+                    else:
+                        rs_line_tag = "⚡RS創年高"
+                        rs_line_bonus = RS_NEW_HIGH_BONUS
+
+        # 真龍頭指標 2：個股相對所屬板塊 ETF 領跑驗證（1M & 3M 雙週期）
+        sector_alpha_tag = ""
+        sector_alpha_bonus = 0.0
+        if (
+            sec_etf
+            and sec_etf in r_1m.index
+            and sec_etf in r_3m.index
+            and pd.notna(r_1m.get(t))
+            and pd.notna(r_3m.get(t))
+            and pd.notna(r_1m.get(sec_etf))
+            and pd.notna(r_3m.get(sec_etf))
+        ):
+            alpha_1m = float((r_1m[t] - r_1m[sec_etf]) * 100.0)
+            alpha_3m = float((r_3m[t] - r_3m[sec_etf]) * 100.0)
+            if np.isfinite(alpha_1m) and np.isfinite(alpha_3m):
+                if alpha_1m > 0 and alpha_3m > 0:
+                    sector_alpha_tag = f"👑跑贏板塊(3M {alpha_3m:+.0f}%)"
+                    sector_alpha_bonus = SECTOR_LEADER_BONUS
+                elif alpha_1m < 0 and alpha_3m < 0:
+                    sector_alpha_tag = f"🐢落後板塊(3M {alpha_3m:+.0f}%)"
+                    sector_alpha_bonus = SECTOR_LAGGARD_PENALTY
+
         # 買點型態精確判定（真縮量 VCP + EMA21 止跌共振優先，放量陰跌收低自動避開）
         in_buy_zone = (BUY_ZONE_MIN_EXT <= ext_ema21_pct <= BUY_ZONE_MAX_EXT)
         is_breakout = (dist_high_pct <= 4.0 and rel_vol >= 1.25 and chg_1d_pct > 0)
@@ -808,7 +856,15 @@ def run_stock_screener():
 
             tightness_score = max(0.0, 10.0 - abs(ext_ema21_pct - 2.0) * 1.2)
             near_high_score = max(0.0, 10.0 - dist_high_pct * 0.5)
-            composite_score = (rs_rating * 0.65) + tightness_score + near_high_score + setup_bonus + sector_bonus
+            composite_score = (
+                (rs_rating * 0.65)
+                + tightness_score
+                + near_high_score
+                + setup_bonus
+                + sector_bonus
+                + rs_line_bonus
+                + sector_alpha_bonus
+            )
         else:
             bucket = 'watch'
             if in_ema21_band and not is_stabilized:
@@ -817,7 +873,13 @@ def run_stock_screener():
                 setup_tag = "⚠️乖離偏高(等回踩)"
             else:
                 setup_tag = "⏳破EMA21觀察"
-            composite_score = float(rs_rating) + (float(raw_rs) * 0.5) + (sector_bonus * 0.5)
+            composite_score = (
+                float(rs_rating)
+                + (float(raw_rs) * 0.5)
+                + (sector_bonus * 0.5)
+                + rs_line_bonus
+                + (sector_alpha_bonus * 0.5)
+            )
 
         passed_trend.append({
             'ticker': t,
@@ -837,6 +899,8 @@ def run_stock_screener():
             'theme_tag': theme_tag,
             'sector_label': sector_label,
             'sector_bonus': sector_bonus,
+            'rs_line_tag': rs_line_tag,
+            'sector_alpha_tag': sector_alpha_tag,
             'setup_tag': setup_tag,
             'bucket': bucket,
             'composite_score': composite_score
@@ -886,7 +950,7 @@ def run_stock_screener():
 
 
 # ==========================================
-# 7. 手機四層精簡卡片排版（含 TradingView 超連結）與 Discord 雙 Embed 推送
+# 7. 手機精簡卡片排版（含 TradingView 超連結與真龍頭副行）與 Discord 推送
 # ==========================================
 def format_tv_link(ticker):
     """將美股代號轉成 TradingView 直開 K 線圖超連結（自動修正 BRK-B 類符號）"""
@@ -931,6 +995,12 @@ def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
         )
         line_2 = f"-#  {tag_prefix}{sec_str}"
 
+        leader_parts = [
+            tag for tag in (row.get('rs_line_tag', ''), row.get('sector_alpha_tag', ''))
+            if tag
+        ]
+        line_leader = f"-#  {' · '.join(leader_parts)}" if leader_parts else ""
+
         if row.get('is_vcp_setup'):
             line_3 = (
                 f"-#  {row['setup_tag']} · EMA21 {row['ext_ema21']:+.1f}% · "
@@ -946,7 +1016,12 @@ def format_stock_cards(df, prev_history, trade_date, is_buy_list=True):
             f"-#  止損 ${row['stop_price']:.2f} (-{row['stop_pct']:.1f}%) · "
             f"1%風險倉 {row['pos_size']:.1f}%{earn_str}"
         )
-        cards.append(f"{line_1}\n{line_2}\n{line_3}\n{line_4}")
+
+        card_lines = [line_1, line_2]
+        if line_leader:
+            card_lines.append(line_leader)
+        card_lines.extend([line_3, line_4])
+        cards.append("\n".join(card_lines))
 
     return "\n".join(cards)
 
@@ -990,7 +1065,7 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
                 "description": (
                     f"{macro_header}\n\n"
                     f"{funnel_block}\n\n"
-                    f"### 🟢 優先買點排名（VCP+EMA21共振 / 真縮量VCP / 止跌回踩）\n"
+                    f"### 🟢 優先買點排名（RS創高 / 板塊龍頭 / VCP共振）\n"
                     f"{buy_cards}"
                 ),
                 "color": 3066993
@@ -1006,7 +1081,7 @@ def send_to_discord(buy_df, watch_df, macro_header, is_bull, trade_date, funnel_
                 ),
                 "color": 15844367,
                 "footer": {
-                    "text": f"美股數據日：{trade_date} • EMA21(-1%~+2.5%)止跌濾網+真縮量VCP • 1%風險定倉({ATR_MULTIPLIER:g}xATR)"
+                    "text": f"美股數據日：{trade_date} • RS線創高+跑贏板塊+真縮量VCP • 1%風險定倉({ATR_MULTIPLIER:g}xATR)"
                 },
                 "timestamp": now_iso
             }
