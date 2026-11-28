@@ -29,21 +29,11 @@
       }
     ]
   },
-  "KO": {
-    "records": [
-      {
-        "date": "2026-11-27",
-        "rank": 4,
-        "bucket": "buy",
-        "rs": 96
-      }
-    ]
-  },
   "WRB": {
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 5,
+        "rank": 4,
         "bucket": "buy",
         "rs": 98
       }
@@ -53,7 +43,7 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 6,
+        "rank": 5,
         "bucket": "buy",
         "rs": 97
       }
@@ -63,9 +53,29 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 7,
+        "rank": 6,
         "bucket": "buy",
         "rs": 98
+      }
+    ]
+  },
+  "V": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 7,
+        "bucket": "buy",
+        "rs": 91
+      }
+    ]
+  },
+  "MET": {
+    "records": [
+      {
+        "date": "2026-11-27",
+        "rank": 8,
+        "bucket": "buy",
+        "rs": 87
       }
     ]
   },
@@ -73,7 +83,7 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 8,
+        "rank": 9,
         "bucket": "buy",
         "rs": 97
       }
@@ -83,19 +93,9 @@
     "records": [
       {
         "date": "2026-11-27",
-        "rank": 9,
-        "bucket": "buy",
-        "rs": 96
-      }
-    ]
-  },
-  "RSG": {
-    "records": [
-      {
-        "date": "2026-11-27",
         "rank": 10,
         "bucket": "buy",
-        "rs": 95
+        "rs": 96
       }
     ]
   },
